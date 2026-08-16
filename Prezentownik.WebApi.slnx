@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="Prezentownik.WebApi/Prezentownik.WebApi.csproj" />
+  <Project Path="Prezentownik.WebApi.Tests/Prezentownik.WebApi.Tests.csproj" />
 </Solution>
