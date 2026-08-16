@@ -14,6 +14,7 @@ public static class UserListsEndpoints
     public static void MapEndpoints(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/user/lists")
+            .WithTags("UserLists")
             .ProducesValidationProblem()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .RequireAuthorization();
@@ -111,7 +112,7 @@ public static class UserListsEndpoints
 
         ListSummaryDto response = UserListsMapper.MapToListSummaryDto(giftList);
 
-        return Results.CreatedAtRoute(nameof(GetListDetails), new { giftList.Id }, response);
+        return Results.CreatedAtRoute(nameof(GetListDetails), new { listId = giftList.Id }, response);
     }
 
     private static async Task<IResult> GetListDetails(Guid listId,

@@ -28,6 +28,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             giftList.ToTable("GiftLists", schema: "app");
 
             giftList.HasKey(gl => gl.Id);
+            giftList.Property(gl => gl.Id)
+                .HasValueGenerator<UuidV7ValueGenerator>();
 
             giftList.Property(gl => gl.Name)
                 .HasMaxLength(128)
@@ -62,6 +64,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             item.ToTable("Items", schema: "app");
 
             item.HasKey(i => i.Id);
+            item.Property(i => i.Id)
+                .HasValueGenerator<UuidV7ValueGenerator>();
 
             item.Property(i => i.Name)
                 .HasMaxLength(128)
@@ -91,6 +95,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             claims.ToTable("Claims", schema: "app");
 
             claims.HasKey(c => c.Id);
+            claims.Property(c => c.Id)
+                .HasValueGenerator<UuidV7ValueGenerator>();
 
             claims.Property(c => c.QuantityClaimed)
                 .IsRequired();

@@ -13,6 +13,7 @@ public static class PublicEndpoints
     public static void MapEndpoints(IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/lists")
+            .WithTags("Public")
             .ProducesValidationProblem();
 
         group.MapGet("/{listId:guid}", GetList)

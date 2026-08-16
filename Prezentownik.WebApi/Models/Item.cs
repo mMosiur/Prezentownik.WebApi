@@ -5,7 +5,7 @@ namespace Prezentownik.WebApi.Models;
 
 public class Item
 {
-    public required Guid Id { get; init; }
+    public Guid Id { get; init; }
 
     public required string Name { get; set; }
 
@@ -30,7 +30,6 @@ public class Item
     [SetsRequiredMembers]
     private Item(string name, string? description, int orderNumber, ItemType type, int? targetQuantity)
     {
-        Id = Guid.CreateVersion7();
         Name = name;
         Description = description;
         Type = type;

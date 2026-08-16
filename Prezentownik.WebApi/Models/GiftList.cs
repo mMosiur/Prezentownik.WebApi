@@ -2,7 +2,7 @@ namespace Prezentownik.WebApi.Models;
 
 public class GiftList
 {
-    public required Guid Id { get; init; }
+    public Guid Id { get; init; }
 
     public required string Name { get; set; }
 
@@ -22,10 +22,8 @@ public class GiftList
 
     public static GiftList CreateNew(string name, string? description, string ownerId)
     {
-        var id = Guid.CreateVersion7();
         return new()
         {
-            Id = id,
             Name = name,
             Description = description,
             OwnerId = ownerId,
