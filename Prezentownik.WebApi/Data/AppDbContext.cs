@@ -39,6 +39,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             giftList.Property(gl => gl.OwnerId)
                 .HasMaxLength(64);
 
+            giftList.HasOne(gl => gl.Owner)
+                .WithMany()
+                .HasForeignKey(gl => gl.OwnerId);
+
             giftList.Property(gl => gl.CreatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
                 .ValueGeneratedOnAdd();

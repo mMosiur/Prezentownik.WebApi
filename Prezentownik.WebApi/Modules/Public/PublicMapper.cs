@@ -6,10 +6,11 @@ namespace Prezentownik.WebApi.Modules.Public;
 
 internal static class PublicMapper
 {
-    public static Dto.PublicListDto MapToPublicListDto(GiftList giftList)
+    public static Dto.PublicListDto MapToPublicListDto(GiftList giftList, AppUser? owner)
         => new(
             giftList.Name,
             giftList.Description,
+            owner?.DisplayName,
             [.. giftList.Items.Select(MapToPublicItemDto)]);
 
 

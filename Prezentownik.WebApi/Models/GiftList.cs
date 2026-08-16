@@ -8,8 +8,8 @@ public class GiftList
 
     public string? Description { get; set; }
 
-    // FK to AspNetUsers — owner of this list
     public required string OwnerId { get; init; }
+    public AppUser? Owner { get; init; }
 
     public DateTimeOffset CreatedAt { get; protected set; }
 
