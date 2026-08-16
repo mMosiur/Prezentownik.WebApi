@@ -57,9 +57,14 @@ public class Item
 
     public void AddClaim(int quantity, string? claimerName)
     {
+        if (quantity <= 0)
+        {
+            throw new InvalidOperationException("Quantity to claim must be greater than zero.");
+        }
+
         var newTotalQuantity = TotalClaimsQuantity + quantity;
 
-        if (newTotalQuantity > TargetQuantity)
+        if (TargetQuantity.HasValue && newTotalQuantity > TargetQuantity.Value)
         {
             throw new InvalidOperationException("Total quantity claimed exceeds target quantity.");
         }

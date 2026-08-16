@@ -10,6 +10,7 @@ using Prezentownik.WebApi.Modules;
 using Prezentownik.WebApi.Modules.Auth;
 using Prezentownik.WebApi.Modules.Public;
 using Prezentownik.WebApi.Modules.UserLists;
+using Prezentownik.WebApi.Extensions;
 using Prezentownik.WebApi;
 using Serilog;
 using Serilog.Events;
@@ -31,8 +32,6 @@ try
         .Enrich.FromLogContext()
         .WriteTo.OpenTelemetry(options =>
         {
-            // options.Endpoint = "http://localhost:4317";
-            // options.Protocol = OtlpProtocol.Grpc;
             options.ResourceAttributes = new Dictionary<string, object>
             {
                 ["service.name"] = Diagnostics.ServiceName
@@ -40,7 +39,30 @@ try
         }));
 
     builder.Services.AddOpenApi();
+
     builder.Services.AddProblemDetails();
+
+    builder.Services.AddCors(options =>
+    {
+        options.AddDefaultPolicy(policy =>
+        {
+            if (builder.Environment.IsDevelopment())
+            {
+                policy.SetIsOriginAllowed(_ => true);
+            }
+            else
+            {
+                var allowedOrigins = builder.Configuration
+                    .GetSection("Cors:AllowedOrigins")
+                    .Get<string[]>() ?? [];
+                policy.WithOrigins(allowedOrigins);
+            }
+
+            policy.AllowAnyHeader()
+                  .AllowAnyMethod()
+                  .AllowCredentials();
+        });
+    });
 
     builder.Services.AddHealthChecks();
 
@@ -93,11 +115,18 @@ try
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();
+        await app.ApplyMigrationsAsync();
+    }
+    else
+    {
+        await app.CheckMigrationsAsync();
     }
 
     app.MapHealthChecks("healthz");
 
     app.UseExceptionHandler();
+
+    app.UseCors();
 
     app.UseSerilogRequestLogging();
 
@@ -110,7 +139,7 @@ try
 
     app.Run();
 }
-catch (Exception ex)
+catch (Exception ex) when (ex is not HostAbortedException)
 {
     Log.Fatal(ex, "Host terminated unexpectedly");
 }
