@@ -67,6 +67,17 @@ public class Item
         Claims.Add(GiftClaim.CreateNew(quantity, claimerName));
     }
 
+    public void RemoveClaim(Guid revocationToken)
+    {
+        var claim = Claims.FirstOrDefault(c => c.RevocationToken == revocationToken);
+        if (claim is null)
+        {
+            throw new InvalidOperationException("Claim not found or invalid revocation token.");
+        }
+
+        Claims.Remove(claim);
+    }
+
     public static Item CreateFromRequest(string name, string? description, int orderNumber, ItemType type, int? targetQuantity)
     {
         return type switch

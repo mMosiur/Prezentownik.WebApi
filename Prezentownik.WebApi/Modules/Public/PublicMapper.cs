@@ -20,7 +20,7 @@ internal static class PublicMapper
             MapItemType(item.Type),
             item.TargetQuantity,
             item.OrderNumber,
-            item.Claims.Sum(c => c.QuantityClaimed),
+            item.TotalClaimsQuantity,
             [.. item.Claims.Select(MapToPublicClaimDto)]);
 
     private static Dto.ItemType MapItemType(ItemType itemType)

@@ -1,62 +1,120 @@
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using OpenTelemetry.Trace;
 using Prezentownik.WebApi.Data;
 using Prezentownik.WebApi.Models;
 using Prezentownik.WebApi.Modules;
 using Prezentownik.WebApi.Modules.Auth;
 using Prezentownik.WebApi.Modules.Public;
 using Prezentownik.WebApi.Modules.UserLists;
+using Prezentownik.WebApi;
+using Serilog;
+using Serilog.Events;
 
-var builder = WebApplication.CreateBuilder(args);
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+    .Enrich.FromLogContext()
+    .WriteTo.Console()
+    .CreateBootstrapLogger();
 
-builder.Services.AddOpenApi();
+try
+{
+    Log.Information("Starting web host");
+    var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddHealthChecks();
+    builder.Services.AddSerilog((services, lc) => lc
+        .ReadFrom.Configuration(builder.Configuration)
+        .ReadFrom.Services(services)
+        .Enrich.FromLogContext()
+        .WriteTo.OpenTelemetry(options =>
+        {
+            // options.Endpoint = "http://localhost:4317";
+            // options.Protocol = OtlpProtocol.Grpc;
+            options.ResourceAttributes = new Dictionary<string, object>
+            {
+                ["service.name"] = Diagnostics.ServiceName
+            };
+        }));
 
-builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(
-    connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
-    o => o.MapApplicationEnums(schema: "app")));
+    builder.Services.AddOpenApi();
+    builder.Services.AddProblemDetails();
 
-builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
+    builder.Services.AddHealthChecks();
+
+    builder.Services.AddOpenTelemetry()
+        .ConfigureResource(resource => resource.AddService(Diagnostics.ServiceName))
+        .WithTracing(tracing => tracing
+            .AddSource(Diagnostics.ServiceName)
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddEntityFrameworkCoreInstrumentation()
+            .AddNpgsql()
+            .AddOtlpExporter())
+        .WithMetrics(metrics => metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddOtlpExporter());
+
+    builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(
+        connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
+        o => o.MapApplicationEnums(schema: "app")));
+
+    builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
+        {
+            // Weak password allowed, for testing purposes only for now
+            options.Password.RequireNonAlphanumeric = false;
+            options.Password.RequireUppercase = false;
+            options.Password.RequireLowercase = false;
+            options.Password.RequireDigit = false;
+
+            options.User.RequireUniqueEmail = true;
+        })
+        .AddEntityFrameworkStores<AppDbContext>();
+
+    builder.Services.AddAuthentication();
+    builder.Services.AddAuthorization();
+
+    builder.Services.RegisterModuleServices<AuthModule>();
+    builder.Services.RegisterModuleServices<UserListsModule>();
+    builder.Services.RegisterModuleServices<PublicModule>();
+
+    var app = builder.Build();
+
+    app.UseForwardedHeaders(new()
     {
-        // Weak password allowed, for testing purposes only for now
-        options.Password.RequireNonAlphanumeric = false;
-        options.Password.RequireUppercase = false;
-        options.Password.RequireLowercase = false;
-        options.Password.RequireDigit = false;
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor
+                         | ForwardedHeaders.XForwardedProto,
+    });
 
-        options.User.RequireUniqueEmail = true;
-    })
-    .AddEntityFrameworkStores<AppDbContext>();
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi();
+    }
 
-builder.Services.AddAuthentication();
-builder.Services.AddAuthorization();
+    app.MapHealthChecks("healthz");
 
-builder.Services.RegisterModuleServices<AuthModule>();
-builder.Services.RegisterModuleServices<UserListsModule>();
-builder.Services.RegisterModuleServices<PublicModule>();
+    app.UseExceptionHandler();
 
-var app = builder.Build();
+    app.UseSerilogRequestLogging();
 
-app.UseForwardedHeaders(new()
-{
-    ForwardedHeaders = ForwardedHeaders.XForwardedFor
-                     | ForwardedHeaders.XForwardedProto,
-});
+    app.UseAuthorization();
 
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
+    app.MapModuleEndpoints<AuthModule>();
+    app.MapModuleEndpoints<UserListsModule>();
+    app.MapModuleEndpoints<PublicModule>();
+
+
+    app.Run();
 }
-
-app.MapHealthChecks("healthz");
-
-app.UseAuthorization();
-
-app.MapModuleEndpoints<AuthModule>();
-app.MapModuleEndpoints<UserListsModule>();
-app.MapModuleEndpoints<PublicModule>();
-
-
-app.Run();
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Host terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

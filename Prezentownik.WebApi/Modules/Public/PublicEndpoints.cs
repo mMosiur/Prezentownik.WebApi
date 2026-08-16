@@ -99,12 +99,16 @@ public static class PublicEndpoints
             .FirstOrDefault(i => i.Id == itemId);
 
         if (item is null) return Results.NotFound();
+        if (revocationToken is null) return Results.BadRequest(new { message = "Revocation token is required." });
 
-        var claimsToRevoke = item.Claims
-            .Where(c => c.RevocationToken == revocationToken)
-            .ToList();
-
-        dbContext.GiftClaims.RemoveRange(claimsToRevoke);
+        try
+        {
+            item.RemoveClaim(revocationToken.Value);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(new { message = ex.Message });
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
