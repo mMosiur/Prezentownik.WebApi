@@ -1,4 +1,15 @@
 <Solution>
-  <Project Path="Prezentownik.WebApi/Prezentownik.WebApi.csproj" />
-  <Project Path="Prezentownik.WebApi.Tests/Prezentownik.WebApi.Tests.csproj" />
+  <Folder Name="/docs/">
+    <File Path="docs/openapi.yaml" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Prezentownik.WebApi/Prezentownik.WebApi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Prezentownik.WebApi.Tests/Prezentownik.WebApi.Tests.csproj" />
+  </Folder>
 </Solution>
