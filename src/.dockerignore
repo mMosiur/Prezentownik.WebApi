@@ -1,0 +1,16 @@
+# Ignore build artifacts
+**/bin/
+**/obj/
+
+# Ignore IDE and source control folders
+.git/
+.vs/
+.vscode/
+.idea/
+
+# Ignore tests and docs (the API container doesn't need them)
+tests/
+docs/
+
+# Ignore local config
+appsettings.Development.json
