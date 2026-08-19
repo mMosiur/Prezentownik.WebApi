@@ -10,7 +10,7 @@ using Prezentownik.WebApi.Modules;
 using Prezentownik.WebApi.Modules.Auth;
 using Prezentownik.WebApi.Modules.Public;
 using Prezentownik.WebApi.Modules.UserLists;
-using Prezentownik.WebApi.Extensions;
+using Prezentownik.WebApi.Health;
 using Prezentownik.WebApi;
 using Serilog;
 using Serilog.Events;
@@ -64,7 +64,8 @@ try
         });
     });
 
-    builder.Services.AddHealthChecks();
+    builder.Services.AddHealthChecks()
+        .AddCheck<DatabaseHealthCheck>("database");
 
     builder.Services.AddOpenTelemetry()
         .ConfigureResource(resource => resource.AddService(Diagnostics.ServiceName))
@@ -115,14 +116,9 @@ try
     if (app.Environment.IsDevelopment())
     {
         app.MapOpenApi();
-        await app.ApplyMigrationsAsync();
-    }
-    else
-    {
-        await app.CheckMigrationsAsync();
     }
 
-    app.MapHealthChecks("healthz");
+    app.MapHealthChecks("health");
 
     app.UseExceptionHandler();
 
