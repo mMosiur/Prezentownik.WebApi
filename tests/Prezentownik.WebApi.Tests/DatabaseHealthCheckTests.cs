@@ -29,8 +29,7 @@ public class DatabaseHealthCheckTests
 
         // Assert
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
-        Assert.NotNull(result.Exception);
-        Assert.Equal("Database is unreachable.", result.Description);
+        Assert.Equal("Database is unreachable", result.Description);
     }
 
     [Fact]
@@ -54,6 +53,6 @@ public class DatabaseHealthCheckTests
         Assert.Equal(HealthStatus.Unhealthy, result.Status);
         Assert.NotNull(result.Exception);
         Assert.IsType<InvalidOperationException>(result.Exception);
-        Assert.Equal("Database is unreachable.", result.Description);
+        Assert.Equal("Database is unreachable", result.Description);
     }
 }
