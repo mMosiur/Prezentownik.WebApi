@@ -46,13 +46,13 @@ public static class UserListsEndpoints
             .WithDescription("Delete a list");
 
         group.MapPost("/{listId:guid}/items", AddListItem)
-            .Accepts<CreateItemRequest>(MediaTypeNames.Application.Json)
+            .Accepts<UpsertItemRequest>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status404NotFound)
             .Produces<ItemDto>(StatusCodes.Status200OK)
             .WithDescription("Add a gift item");
 
         group.MapPut("/{listId:guid}/items/{itemId:guid}", EditListItem)
-            .Accepts<UpdateItemRequest>(MediaTypeNames.Application.Json)
+            .Accepts<UpsertItemRequest>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status404NotFound)
             .Produces<ItemDto>(StatusCodes.Status200OK)
             .WithDescription("Edit a gift item");
@@ -176,7 +176,7 @@ public static class UserListsEndpoints
         return Results.NoContent();
     }
 
-    internal static async Task<IResult> AddListItem(Guid listId, CreateItemRequest request,
+    internal static async Task<IResult> AddListItem(Guid listId, UpsertItemRequest request,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId()!;
@@ -205,7 +205,7 @@ public static class UserListsEndpoints
         return Results.Ok(UserListsMapper.MapToItemDto(item));
     }
 
-    internal static async Task<IResult> EditListItem(Guid listId, Guid itemId, UpdateItemRequest request,
+    internal static async Task<IResult> EditListItem(Guid listId, Guid itemId, UpsertItemRequest request,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId()!;

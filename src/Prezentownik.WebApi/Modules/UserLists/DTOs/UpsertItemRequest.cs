@@ -1,6 +1,6 @@
 namespace Prezentownik.WebApi.Modules.UserLists.DTOs;
 
-public record UpdateItemRequest(
+public record UpsertItemRequest(
     string Name,
     string? Description,
     ItemType Type,

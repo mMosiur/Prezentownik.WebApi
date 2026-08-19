@@ -39,21 +39,21 @@ public class UserListsEndpointsTests
         var userId = "user_42";
         var principal = CreatePrincipal(userId);
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
 
         // Add 1st item
-        var item1Req = new CreateItemRequest("First Item", "Desc 1", Modules.UserLists.DTOs.ItemType.Singular, 1);
+        var item1Req = new UpsertItemRequest("First Item", "Desc 1", Modules.UserLists.DTOs.ItemType.Singular, 1);
         var result1 = await UserListsEndpoints.AddListItem(giftList.Id, item1Req, principal, dbContext, CancellationToken.None);
-        var okResult1 = Assert.IsAssignableFrom<IValueHttpResult<ItemDto>>(result1);
+        var okResult1 = Assert.IsType<IValueHttpResult<ItemDto>>(result1, exactMatch: false);
         Assert.Equal(1, okResult1.Value!.OrderNumber);
 
         // Add 2nd item
-        var item2Req = new CreateItemRequest("Second Item", "Desc 2", Modules.UserLists.DTOs.ItemType.Limited, 3);
+        var item2Req = new UpsertItemRequest("Second Item", "Desc 2", Modules.UserLists.DTOs.ItemType.Limited, 3);
         var result2 = await UserListsEndpoints.AddListItem(giftList.Id, item2Req, principal, dbContext, CancellationToken.None);
-        var okResult2 = Assert.IsAssignableFrom<IValueHttpResult<ItemDto>>(result2);
+        var okResult2 = Assert.IsType<IValueHttpResult<ItemDto>>(result2, exactMatch: false);
         Assert.Equal(2, okResult2.Value!.OrderNumber);
     }
 
@@ -64,16 +64,16 @@ public class UserListsEndpointsTests
         var userId = "user_42";
         var principal = CreatePrincipal(userId);
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
         var item = Item.CreateFromRequest("Old Name", "Old Desc", 5, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
         giftList.Items.Add(item);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
 
-        var updateReq = new UpdateItemRequest("New Name", "New Desc", Modules.UserLists.DTOs.ItemType.Limited, 10);
+        var updateReq = new UpsertItemRequest("New Name", "New Desc", Modules.UserLists.DTOs.ItemType.Limited, 10);
         var result = await UserListsEndpoints.EditListItem(giftList.Id, item.Id, updateReq, principal, dbContext, CancellationToken.None);
-        var okResult = Assert.IsAssignableFrom<IValueHttpResult<ItemDto>>(result);
+        var okResult = Assert.IsType<IValueHttpResult<ItemDto>>(result, exactMatch: false);
 
         Assert.Equal("New Name", okResult.Value!.Name);
         Assert.Equal("New Desc", okResult.Value!.Description);
@@ -88,7 +88,7 @@ public class UserListsEndpointsTests
         var userId = "user_42";
         var principal = CreatePrincipal(userId);
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
         var itemA = Item.CreateFromRequest("Item A", null, 1, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
         var itemB = Item.CreateFromRequest("Item B", null, 2, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
@@ -102,7 +102,7 @@ public class UserListsEndpointsTests
         // Reorder: C, A, B
         var reorderReq = new ReorderItemsRequest([itemC.Id, itemA.Id, itemB.Id]);
         var result = await UserListsEndpoints.ReorderListItems(giftList.Id, reorderReq, principal, dbContext, CancellationToken.None);
-        var okResult = Assert.IsAssignableFrom<IValueHttpResult<ListDetailsDto>>(result);
+        var okResult = Assert.IsType<IValueHttpResult<ListDetailsDto>>(result, exactMatch: false);
 
         Assert.Equal(itemC.Id, okResult.Value!.Items[0].Id);
         Assert.Equal(1, okResult.Value!.Items[0].OrderNumber);
@@ -121,11 +121,11 @@ public class UserListsEndpointsTests
         var userId = "user_42";
         var principal = CreatePrincipal(userId);
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var reorderReq = new ReorderItemsRequest([Guid.NewGuid()]);
         var result = await UserListsEndpoints.ReorderListItems(Guid.NewGuid(), reorderReq, principal, dbContext, CancellationToken.None);
 
-        Assert.IsAssignableFrom<NotFound>(result);
+        Assert.IsType<NotFound>(result, exactMatch: false);
     }
 
     [Fact]
@@ -135,7 +135,7 @@ public class UserListsEndpointsTests
         var userId = "user_42";
         var principal = CreatePrincipal(userId);
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
         var itemA = Item.CreateFromRequest("Item A", null, 1, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
         giftList.Items.Add(itemA);
@@ -145,7 +145,7 @@ public class UserListsEndpointsTests
         var reorderReq = new ReorderItemsRequest([]); // Empty list when list has 1 item
         var result = await UserListsEndpoints.ReorderListItems(giftList.Id, reorderReq, principal, dbContext, CancellationToken.None);
 
-        Assert.IsAssignableFrom<IStatusCodeHttpResult>(result);
+        Assert.IsType<IStatusCodeHttpResult>(result, exactMatch: false);
         var statusResult = (IStatusCodeHttpResult)result;
         Assert.Equal(StatusCodes.Status400BadRequest, statusResult.StatusCode);
     }
@@ -157,7 +157,7 @@ public class UserListsEndpointsTests
         var userId = "user_42";
         var principal = CreatePrincipal(userId);
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
         var itemA = Item.CreateFromRequest("Item A", null, 1, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
         var itemB = Item.CreateFromRequest("Item B", null, 2, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
@@ -180,7 +180,7 @@ public class UserListsEndpointsTests
         var userId = "user_42";
         var principal = CreatePrincipal(userId);
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
         var itemA = Item.CreateFromRequest("Item A", null, 1, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
         giftList.Items.Add(itemA);

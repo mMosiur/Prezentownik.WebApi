@@ -657,7 +657,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateItemRequest"
+                "$ref": "#/components/schemas/UpsertItemRequest"
               }
             }
           },
@@ -730,7 +730,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpdateItemRequest"
+                "$ref": "#/components/schemas/UpsertItemRequest"
               }
             }
           },
@@ -1120,38 +1120,6 @@
               "null",
               "string"
             ]
-          }
-        }
-      },
-      "CreateItemRequest": {
-        "required": [
-          "name",
-          "description",
-          "type",
-          "targetQuantity"
-        ],
-        "type": "object",
-        "properties": {
-          "name": {
-            "type": "string"
-          },
-          "description": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "type": {
-            "$ref": "#/components/schemas/ItemType"
-          },
-          "targetQuantity": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
-            "type": [
-              "null",
-              "integer",
-              "string"
-            ],
-            "format": "int32"
           }
         }
       },
@@ -1687,7 +1655,21 @@
           }
         }
       },
-      "UpdateItemRequest": {
+      "UpdateUserInfoRequest": {
+        "required": [
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "UpsertItemRequest": {
         "required": [
           "name",
           "description",
@@ -1716,20 +1698,6 @@
               "string"
             ],
             "format": "int32"
-          }
-        }
-      },
-      "UpdateUserInfoRequest": {
-        "required": [
-          "displayName"
-        ],
-        "type": "object",
-        "properties": {
-          "displayName": {
-            "type": [
-              "null",
-              "string"
-            ]
           }
         }
       }

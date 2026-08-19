@@ -46,7 +46,7 @@ public static class UserListsMapper
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
 
-    public static Item MapOntoItem(Item item, Dto.UpdateItemRequest request)
+    public static Item MapOntoItem(Item item, Dto.UpsertItemRequest request)
     {
         item.UpdateFromRequest(
             request.Name,
