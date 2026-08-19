@@ -5,7 +5,7 @@
 namespace Prezentownik.WebApi.Migrations
 {
     /// <inheritdoc />
-    public partial class Test : Migration
+    public partial class AddGiftListUserIndex : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)

@@ -13,8 +13,8 @@ using Prezentownik.WebApi.Models.Enums;
 namespace Prezentownik.WebApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260816200153_Test")]
-    partial class Test
+    [Migration("20260819131322_AddGiftListUserIndex")]
+    partial class AddGiftListUserIndex
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
