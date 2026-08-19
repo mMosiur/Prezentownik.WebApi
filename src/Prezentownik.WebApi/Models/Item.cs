@@ -93,11 +93,10 @@ public class Item
         };
     }
 
-    public void UpdateFromRequest(string name, string? description, int orderNumber, ItemType type, int? targetQuantity)
+    public void UpdateFromRequest(string name, string? description, ItemType type, int? targetQuantity)
     {
         Name = name;
         Description = description;
-        OrderNumber = orderNumber;
         Type = type;
         TargetQuantity = type switch
         {

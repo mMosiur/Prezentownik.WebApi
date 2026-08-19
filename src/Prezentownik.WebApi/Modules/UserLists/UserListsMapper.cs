@@ -17,7 +17,7 @@ public static class UserListsMapper
             giftList.Id,
             giftList.Name,
             giftList.Description,
-            [.. giftList.Items.Select(MapToItemDto)]);
+            [.. giftList.Items.OrderBy(i => i.OrderNumber).Select(MapToItemDto)]);
 
     public static Dto.ItemDto MapToItemDto(Item item)
         => new(
@@ -46,12 +46,11 @@ public static class UserListsMapper
             _ => throw new ArgumentOutOfRangeException(nameof(type), type, null)
         };
 
-    public static Item MapOntoItem(Item item, Dto.UpsertItemRequest request)
+    public static Item MapOntoItem(Item item, Dto.UpdateItemRequest request)
     {
         item.UpdateFromRequest(
             request.Name,
             request.Description,
-            request.OrderNumber,
             MapItemTypeDomain(request.Type),
             request.TargetQuantity);
 

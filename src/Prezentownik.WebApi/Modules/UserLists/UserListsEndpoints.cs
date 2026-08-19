@@ -46,16 +46,23 @@ public static class UserListsEndpoints
             .WithDescription("Delete a list");
 
         group.MapPost("/{listId:guid}/items", AddListItem)
-            .Accepts<UpsertItemRequest>(MediaTypeNames.Application.Json)
+            .Accepts<CreateItemRequest>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status404NotFound)
             .Produces<ItemDto>(StatusCodes.Status200OK)
             .WithDescription("Add a gift item");
 
         group.MapPut("/{listId:guid}/items/{itemId:guid}", EditListItem)
-            .Accepts<UpsertItemRequest>(MediaTypeNames.Application.Json)
+            .Accepts<UpdateItemRequest>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status404NotFound)
             .Produces<ItemDto>(StatusCodes.Status200OK)
             .WithDescription("Edit a gift item");
+
+        group.MapPut("/{listId:guid}/items/reorder", ReorderListItems)
+            .Accepts<ReorderItemsRequest>(MediaTypeNames.Application.Json)
+            .Produces(StatusCodes.Status404NotFound)
+            .Produces(StatusCodes.Status400BadRequest)
+            .Produces<ListDetailsDto>(StatusCodes.Status200OK)
+            .WithDescription("Reorder list items");
 
         group.MapDelete("/{listId:guid}/items/{itemId:guid}", DeleteListItem)
             .Produces(StatusCodes.Status404NotFound)
@@ -77,7 +84,7 @@ public static class UserListsEndpoints
         return await query.FirstOrDefaultAsync(i => i.Id == itemId && i.GiftList.OwnerId == userId, ct);
     }
 
-    private static async Task<IResult> GetAllLists(
+    internal static async Task<IResult> GetAllLists(
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId()!;
@@ -95,7 +102,7 @@ public static class UserListsEndpoints
         return Results.Ok(response);
     }
 
-    private static async Task<IResult> CreateNewList(CreateGiftListRequest request,
+    internal static async Task<IResult> CreateNewList(CreateGiftListRequest request,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId()!;
@@ -115,7 +122,7 @@ public static class UserListsEndpoints
         return Results.CreatedAtRoute(nameof(GetListDetails), new { listId = giftList.Id }, response);
     }
 
-    private static async Task<IResult> GetListDetails(Guid listId,
+    internal static async Task<IResult> GetListDetails(Guid listId,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId()!;
@@ -129,7 +136,7 @@ public static class UserListsEndpoints
         return Results.Ok(UserListsMapper.MapToListDetailsDto(giftList));
     }
 
-    private static async Task<IResult> EditList(Guid listId, UpdateGiftListRequest request,
+    internal static async Task<IResult> EditList(Guid listId, UpdateGiftListRequest request,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId()!;
@@ -148,7 +155,7 @@ public static class UserListsEndpoints
         return Results.Ok(UserListsMapper.MapToListSummaryDto(giftList));
     }
 
-    private static async Task<IResult> DeleteList(Guid listId,
+    internal static async Task<IResult> DeleteList(Guid listId,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId()!;
@@ -169,7 +176,7 @@ public static class UserListsEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> AddListItem(Guid listId, UpsertItemRequest request,
+    internal static async Task<IResult> AddListItem(Guid listId, CreateItemRequest request,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId()!;
@@ -180,10 +187,14 @@ public static class UserListsEndpoints
 
         if (giftList is null) return Results.NotFound();
 
+        var nextOrder = giftList.Items.Count > 0
+            ? giftList.Items.Max(i => i.OrderNumber) + 1
+            : 1;
+
         var item = Item.CreateFromRequest(
             request.Name,
             request.Description,
-            request.OrderNumber,
+            nextOrder,
             UserListsMapper.MapItemTypeDomain(request.Type),
             request.TargetQuantity);
 
@@ -194,7 +205,7 @@ public static class UserListsEndpoints
         return Results.Ok(UserListsMapper.MapToItemDto(item));
     }
 
-    private static async Task<IResult> EditListItem(Guid listId, Guid itemId, UpsertItemRequest request,
+    internal static async Task<IResult> EditListItem(Guid listId, Guid itemId, UpdateItemRequest request,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId()!;
@@ -203,7 +214,7 @@ public static class UserListsEndpoints
 
         var item = await GetItemWithOwnerAsync(dbContext, itemId, userId, includeClaims: true, ct: cancellationToken);
 
-        if (item is null) return Results.NotFound();
+        if (item is null || item.GiftListId != listId) return Results.NotFound();
 
         UserListsMapper.MapOntoItem(item, request);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -211,7 +222,52 @@ public static class UserListsEndpoints
         return Results.Ok(UserListsMapper.MapToItemDto(item));
     }
 
-    private static async Task<IResult> DeleteListItem(Guid listId, Guid itemId,
+    internal static async Task<IResult> ReorderListItems(Guid listId, ReorderItemsRequest request,
+        ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var userId = principal.GetUserId()!;
+
+        Log.Information("Reordering items for gift list {ListId} for user {UserId}", listId, userId);
+
+        var giftList = await GetGiftListWithOwnerAsync(dbContext, listId, userId, includeItems: true, ct: cancellationToken);
+
+        if (giftList is null) return Results.NotFound();
+
+        if (request.ItemIds is null)
+        {
+            return Results.BadRequest(new { message = "Item IDs list is required." });
+        }
+
+        if (request.ItemIds.Count != giftList.Items.Count)
+        {
+            return Results.BadRequest(new { message = "The number of item IDs does not match the number of items in the list." });
+        }
+
+        if (request.ItemIds.Distinct().Count() != request.ItemIds.Count)
+        {
+            return Results.BadRequest(new { message = "Duplicate item IDs provided." });
+        }
+
+        var itemDict = giftList.Items.ToDictionary(i => i.Id);
+        foreach (var itemId in request.ItemIds)
+        {
+            if (!itemDict.ContainsKey(itemId))
+            {
+                return Results.BadRequest(new { message = $"Item with ID {itemId} does not belong to this gift list." });
+            }
+        }
+
+        for (var i = 0; i < request.ItemIds.Count; i++)
+        {
+            itemDict[request.ItemIds[i]].OrderNumber = i + 1;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+
+        return Results.Ok(UserListsMapper.MapToListDetailsDto(giftList));
+    }
+
+    internal static async Task<IResult> DeleteListItem(Guid listId, Guid itemId,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         var userId = principal.GetUserId()!;

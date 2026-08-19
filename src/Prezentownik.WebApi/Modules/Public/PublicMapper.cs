@@ -11,7 +11,7 @@ internal static class PublicMapper
             giftList.Name,
             giftList.Description,
             owner?.DisplayName,
-            [.. giftList.Items.Select(MapToPublicItemDto)]);
+            [.. giftList.Items.OrderBy(i => i.OrderNumber).Select(MapToPublicItemDto)]);
 
 
     public static Dto.PublicItemDto MapToPublicItemDto(Item item)

@@ -72,7 +72,7 @@ public class GiftListItemsTests
     }
 
     [Fact]
-    public async Task EditingItem_ShouldSaveSuccessfully()
+    public async Task EditingItem_ShouldSaveSuccessfully_AndPreserveOrderNumber()
     {
         var dbName = Guid.NewGuid().ToString();
 
@@ -85,14 +85,14 @@ public class GiftListItemsTests
 
         using var context2 = CreateDbContext(dbName);
         var itemToEdit = await context2.Items.FirstAsync(i => i.Id == item.Id);
-        itemToEdit.UpdateFromRequest("Updated Name", "Updated Desc", 2, ItemType.Limited, 5);
+        itemToEdit.UpdateFromRequest("Updated Name", "Updated Desc", ItemType.Limited, 5);
         await context2.SaveChangesAsync();
 
         using var context3 = CreateDbContext(dbName);
         var reloaded = await context3.Items.FirstAsync(i => i.Id == item.Id);
         Assert.Equal("Updated Name", reloaded.Name);
         Assert.Equal("Updated Desc", reloaded.Description);
-        Assert.Equal(2, reloaded.OrderNumber);
+        Assert.Equal(1, reloaded.OrderNumber);
         Assert.Equal(ItemType.Limited, reloaded.Type);
         Assert.Equal(5, reloaded.TargetQuantity);
     }
@@ -185,5 +185,55 @@ public class GiftListItemsTests
         using var context3 = CreateDbContext(dbName);
         var reloaded = await context3.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);
         Assert.Empty(reloaded.Claims);
+    }
+
+    [Fact]
+    public async Task ReorderingItems_ShouldUpdateOrderNumbersAndPersist()
+    {
+        var dbName = Guid.NewGuid().ToString();
+
+        using var dbContext = CreateDbContext(dbName);
+        var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
+        var item1 = Item.CreateFromRequest("Item 1", null, 1, ItemType.Singular, 1);
+        var item2 = Item.CreateFromRequest("Item 2", null, 2, ItemType.Singular, 1);
+        var item3 = Item.CreateFromRequest("Item 3", null, 3, ItemType.Singular, 1);
+        giftList.Items.Add(item1);
+        giftList.Items.Add(item2);
+        giftList.Items.Add(item3);
+        dbContext.GiftLists.Add(giftList);
+        await dbContext.SaveChangesAsync();
+
+        // Act: reorder [item3, item1, item2]
+        using var context2 = CreateDbContext(dbName);
+        var listToReorder = await context2.GiftLists.Include(g => g.Items).FirstAsync(g => g.Id == giftList.Id);
+        var itemDict = listToReorder.Items.ToDictionary(i => i.Id);
+
+        var newOrder = new List<Guid> { item3.Id, item1.Id, item2.Id };
+        for (var i = 0; i < newOrder.Count; i++)
+        {
+            itemDict[newOrder[i]].OrderNumber = i + 1;
+        }
+        await context2.SaveChangesAsync();
+
+        // Assert
+        using var context3 = CreateDbContext(dbName);
+        var reloaded = await context3.GiftLists.Include(g => g.Items).FirstAsync(g => g.Id == giftList.Id);
+        var reloadedItem1 = reloaded.Items.First(i => i.Id == item1.Id);
+        var reloadedItem2 = reloaded.Items.First(i => i.Id == item2.Id);
+        var reloadedItem3 = reloaded.Items.First(i => i.Id == item3.Id);
+
+        Assert.Equal(2, reloadedItem1.OrderNumber);
+        Assert.Equal(3, reloadedItem2.OrderNumber);
+        Assert.Equal(1, reloadedItem3.OrderNumber);
+
+        var userListDetails = Prezentownik.WebApi.Modules.UserLists.UserListsMapper.MapToListDetailsDto(reloaded);
+        Assert.Equal(item3.Id, userListDetails.Items[0].Id);
+        Assert.Equal(item1.Id, userListDetails.Items[1].Id);
+        Assert.Equal(item2.Id, userListDetails.Items[2].Id);
+
+        var publicListDto = Prezentownik.WebApi.Modules.Public.PublicMapper.MapToPublicListDto(reloaded, null);
+        Assert.Equal(item3.Id, publicListDto.Items[0].Id);
+        Assert.Equal(item1.Id, publicListDto.Items[1].Id);
+        Assert.Equal(item2.Id, publicListDto.Items[2].Id);
     }
 }

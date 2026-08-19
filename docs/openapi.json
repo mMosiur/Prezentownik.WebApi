@@ -657,7 +657,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpsertItemRequest"
+                "$ref": "#/components/schemas/CreateItemRequest"
               }
             }
           },
@@ -730,7 +730,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UpsertItemRequest"
+                "$ref": "#/components/schemas/UpdateItemRequest"
               }
             }
           },
@@ -823,6 +823,63 @@
           },
           "204": {
             "description": "No Content"
+          }
+        }
+      }
+    },
+    "/user/lists/{listId}/items/reorder": {
+      "put": {
+        "tags": [
+          "UserLists"
+        ],
+        "description": "Reorder list items",
+        "parameters": [
+          {
+            "name": "listId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderItemsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "Bad Request"
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListDetailsDto"
+                }
+              }
+            }
           }
         }
       }
@@ -1063,6 +1120,38 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CreateItemRequest": {
+        "required": [
+          "name",
+          "description",
+          "type",
+          "targetQuantity"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "type": {
+            "$ref": "#/components/schemas/ItemType"
+          },
+          "targetQuantity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -1472,6 +1561,21 @@
           }
         }
       },
+      "ReorderItemsRequest": {
+        "required": [
+          "itemIds"
+        ],
+        "type": "object",
+        "properties": {
+          "itemIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "ResendConfirmationEmailRequest": {
         "required": [
           "email"
@@ -1583,27 +1687,12 @@
           }
         }
       },
-      "UpdateUserInfoRequest": {
-        "required": [
-          "displayName"
-        ],
-        "type": "object",
-        "properties": {
-          "displayName": {
-            "type": [
-              "null",
-              "string"
-            ]
-          }
-        }
-      },
-      "UpsertItemRequest": {
+      "UpdateItemRequest": {
         "required": [
           "name",
           "description",
           "type",
-          "targetQuantity",
-          "orderNumber"
+          "targetQuantity"
         ],
         "type": "object",
         "properties": {
@@ -1627,14 +1716,20 @@
               "string"
             ],
             "format": "int32"
-          },
-          "orderNumber": {
-            "pattern": "^-?(?:0|[1-9]\\d*)$",
+          }
+        }
+      },
+      "UpdateUserInfoRequest": {
+        "required": [
+          "displayName"
+        ],
+        "type": "object",
+        "properties": {
+          "displayName": {
             "type": [
-              "integer",
+              "null",
               "string"
-            ],
-            "format": "int32"
+            ]
           }
         }
       }
