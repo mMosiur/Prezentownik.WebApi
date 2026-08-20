@@ -1,4 +1,6 @@
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using OpenTelemetry.Metrics;
@@ -41,6 +43,8 @@ try
     builder.Services.AddOpenApi();
 
     builder.Services.AddProblemDetails();
+
+    builder.Services.AddValidation();
 
     builder.Services.AddCors(options =>
     {
@@ -88,7 +92,10 @@ try
 
     builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
         {
-            // Weak password allowed, for testing purposes only for now
+            // The audience is non-technical family members, so we deliberately
+            // skip character-variety rules (uppercase/digit/symbol) to keep
+            // sign-up friction-free. A longer minimum length is a reasonable
+            // trade-off that still meaningfully improves security.
             options.Password.RequireNonAlphanumeric = false;
             options.Password.RequireUppercase = false;
             options.Password.RequireLowercase = false;
@@ -100,6 +107,24 @@ try
 
     builder.Services.AddAuthentication();
     builder.Services.AddAuthorization();
+
+    builder.Services.AddRateLimiter(options =>
+    {
+        options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+
+        // Anonymous visitors claim/unclaim gifts without an account, so throttle
+        // by IP to stop accidental double-submits (flaky mobile connections)
+        // and deliberate spam from overwhelming a list's claims.
+        options.AddPolicy("public-claims", httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey: httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                factory: _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 20,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0
+                }));
+    });
 
     builder.Services.RegisterModuleServices<AuthModule>();
     builder.Services.RegisterModuleServices<UserListsModule>();
@@ -125,6 +150,8 @@ try
     app.UseCors();
 
     app.UseSerilogRequestLogging();
+
+    app.UseRateLimiter();
 
     app.UseAuthorization();
 

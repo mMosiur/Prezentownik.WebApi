@@ -1,7 +1,9 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace Prezentownik.WebApi.Modules.UserLists.DTOs;
 
 public record UpsertItemRequest(
-    string Name,
-    string? Description,
+    [Required, MaxLength(128)] string Name,
+    [MaxLength(1024)] string? Description,
     ItemType Type,
-    int? TargetQuantity);
+    [Range(1, int.MaxValue)] int? TargetQuantity);

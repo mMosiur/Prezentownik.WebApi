@@ -23,15 +23,17 @@ public static class PublicEndpoints
         group.MapPost("/{listId:guid}/items/{itemId:guid}/claims", ClaimGift)
             .Accepts<CreateClaimRequest>(MediaTypeNames.Application.Json)
             .Produces<CreateClaimResponse>(StatusCodes.Status200OK)
+            .RequireRateLimiting("public-claims")
             .WithDescription("Claim a gift");
 
         group.MapDelete("/{listId:guid}/items/{itemId:guid}/claims", UnclaimGift)
             .Produces(StatusCodes.Status204NoContent)
             .Produces(StatusCodes.Status403Forbidden)
+            .RequireRateLimiting("public-claims")
             .WithDescription("Unclaim a gift");
     }
 
-    private static async Task<IResult> GetList(Guid listId,
+    internal static async Task<IResult> GetList(Guid listId,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         Log.Information("Getting public list {ListId}", listId);
@@ -56,7 +58,7 @@ public static class PublicEndpoints
         return Results.Ok(response);
     }
 
-    private static async Task<IResult> ClaimGift(Guid listId, Guid itemId, CreateClaimRequest request,
+    internal static async Task<IResult> ClaimGift(Guid listId, Guid itemId, CreateClaimRequest request,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         Log.Information("Claiming gift {ItemId} from public list {ListId} (Claimer name: {ClaimerName}, quantity: {ClaimQuantity})",
@@ -90,7 +92,7 @@ public static class PublicEndpoints
         return Results.Ok(response);
     }
 
-    private static async Task<IResult> UnclaimGift(Guid listId, Guid itemId, [FromQuery] Guid? revocationToken,
+    internal static async Task<IResult> UnclaimGift(Guid listId, Guid itemId, [FromQuery] Guid? revocationToken,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
         Log.Information("Unclaiming gift {ItemId} from public list {ListId} (Revocation token: {RevocationToken})",

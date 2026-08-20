@@ -102,8 +102,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                 .IsRequired();
 
             claims.Property(c => c.ClaimerName)
-                .HasMaxLength(64)
-                .IsRequired();
+                .HasMaxLength(64);
 
             claims.Property(c => c.RevocationToken);
         });
