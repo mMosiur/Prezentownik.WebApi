@@ -82,3 +82,4 @@ jobs:
           app-name: 'prezentownik-api'
           slot-name: 'Production'
           package: .
+          clean: true
