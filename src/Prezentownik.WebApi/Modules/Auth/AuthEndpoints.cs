@@ -16,6 +16,13 @@ public static class AuthEndpoints
 
         authGroup.MapIdentityApi<AppUser>();
 
+        // MapIdentityApi<AppUser>() does not add a logout endpoint (a known
+        // gap in ASP.NET Core Identity's minimal API endpoints), so the
+        // cookie survives client-side "logout" unless we clear it ourselves.
+        authGroup.MapPost("/logout", Logout)
+            .RequireAuthorization()
+            .WithDescription("Sign the current user out and clear the auth cookie");
+
         authGroup.MapGet("/me", GetUserInfo)
             .RequireAuthorization()
             .WithDescription("Get user information");
@@ -23,6 +30,13 @@ public static class AuthEndpoints
         authGroup.MapPut("/me", UpdateUserInfo)
             .RequireAuthorization()
             .WithDescription("Update user information");
+    }
+
+    private static async Task<IResult> Logout(SignInManager<AppUser> signInManager)
+    {
+        await signInManager.SignOutAsync();
+        Log.Information("User signed out");
+        return Results.NoContent();
     }
 
     private static async Task<IResult> GetUserInfo(ClaimsPrincipal user, UserManager<AppUser> userManager)

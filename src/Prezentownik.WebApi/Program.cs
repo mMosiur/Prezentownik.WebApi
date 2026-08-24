@@ -1,6 +1,5 @@
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using OpenTelemetry.Metrics;
@@ -107,6 +106,8 @@ try
             options.Password.RequireUppercase = false;
             options.Password.RequireLowercase = false;
             options.Password.RequireDigit = false;
+
+            options.SignIn.RequireConfirmedEmail = true;
         })
         .AddEntityFrameworkStores<AppDbContext>()
         .AddErrorDescriber<LocalizedIdentityErrorDescriber>();
@@ -132,10 +133,10 @@ try
                 }));
     });
 
-    builder.Services
-        .RegisterModuleServices<AuthModule>()
-        .RegisterModuleServices<UserListsModule>()
-        .RegisterModuleServices<PublicModule>();
+    builder
+        .RegisterModule<AuthModule>()
+        .RegisterModule<UserListsModule>()
+        .RegisterModule<PublicModule>();
 
     var app = builder.Build();
 
@@ -167,6 +168,7 @@ try
         .AddSupportedCultures(supportedCultures)
         .AddSupportedUICultures(supportedCultures));
 
+    app.UseAuthentication();
     app.UseAuthorization();
 
     app
