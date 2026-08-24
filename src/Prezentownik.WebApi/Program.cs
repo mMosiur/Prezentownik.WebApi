@@ -13,6 +13,7 @@ using Prezentownik.WebApi.Modules.Public;
 using Prezentownik.WebApi.Modules.UserLists;
 using Prezentownik.WebApi.Health;
 using Prezentownik.WebApi;
+using Prezentownik.WebApi.Services;
 using Serilog;
 using Serilog.Events;
 
@@ -134,6 +135,7 @@ try
     });
 
     builder
+        .AddApplicationServices()
         .RegisterModule<AuthModule>()
         .RegisterModule<UserListsModule>()
         .RegisterModule<PublicModule>();

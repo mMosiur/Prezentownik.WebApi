@@ -8,10 +8,8 @@ public abstract class AuthModule : IModule
 {
     public static void RegisterModule(IHostApplicationBuilder builder)
     {
-        if (builder.Environment.IsDevelopment())
-            builder.Services.AddTransient<IEmailSender<AppUser>, LoggingOnlyConfirmationEmailSender>();
-        else
-            builder.Services.AddTransient<IEmailSender<AppUser>, ConfirmationEmailSender>();
+        builder.Services.AddTransient<IIdentityEmailTemplateService, IdentityEmailTemplateService>();
+        builder.Services.AddTransient<IEmailSender<AppUser>, IdentityEmailSender>();
     }
 
     public static void MapEndpoints(IEndpointRouteBuilder app)

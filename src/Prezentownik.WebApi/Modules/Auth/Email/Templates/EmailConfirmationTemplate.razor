@@ -1,0 +1,15 @@
+<EmailLayout
+    Title="Potwierdź swój adres e-mail"
+    Heading="Witaj w serwisie Prezentownik!"
+    ButtonText="Potwierdź adres e-mail"
+    ButtonUrl="@ConfirmationLink"
+    FooterNote="Jeśli to nie Ty zakładałeś konto w serwisie Prezentownik, możesz zignorować tę wiadomość.">
+    <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #374151;">
+        Dziękujemy za rejestrację. Aby aktywować swoje konto i zacząć tworzyć listy prezentów, potwierdź swój adres e-mail.
+    </p>
+</EmailLayout>
+
+@code {
+    [Parameter]
+    public required string ConfirmationLink { get; set; }
+}
