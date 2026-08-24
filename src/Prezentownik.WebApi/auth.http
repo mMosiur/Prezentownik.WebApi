@@ -1,0 +1,130 @@
+@email = testuser@example.com
+@password = Password123!
+@newPassword = NewPassword123!
+
+### 1. Register a new user
+# Registers a new user account with email and password
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+Accept-Language: pl
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### 2. Login (Bearer Token)
+# Logs in and returns accessToken, refreshToken, and expiration
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### 2b. Login (Cookie / Session)
+# Alternative login setting auth cookies instead of returning bearer tokens
+POST {{baseUrl}}/auth/login?useCookies=true
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "password": "{{password}}"
+}
+
+### Token variables extracted from login response (in JetBrains Rider / REST Client)
+@authToken = {{login.response.body.accessToken}}
+@refreshToken = {{login.response.body.refreshToken}}
+
+### 3. Refresh Token
+# Generates a new access token using a refresh token
+POST {{baseUrl}}/auth/refresh
+Content-Type: application/json
+
+{
+  "refreshToken": "{{refreshToken}}"
+}
+
+### 4. Resend Confirmation Email
+# Requests a new confirmation email
+POST {{baseUrl}}/auth/resendConfirmationEmail
+Content-Type: application/json
+
+{
+  "email": "{{email}}"
+}
+
+### 5. Confirm Email
+# Confirms user email using the userId and code received in the confirmation link
+# Note: replace the placeholder values below with the actual parameters from the link/email
+@userId = replace-with-user-id
+@confirmCode = replace-with-confirmation-code
+GET {{baseUrl}}/auth/confirmEmail?userId={{userId}}&code={{confirmCode}}
+
+### 6. Forgot Password
+# Requests a password reset link/code to be sent to the user's email
+POST {{baseUrl}}/auth/forgotPassword
+Content-Type: application/json
+
+{
+  "email": "{{email}}"
+}
+
+### 7. Reset Password
+# Resets the password using the reset code received via email
+@resetCode = replace-with-reset-code
+POST {{baseUrl}}/auth/resetPassword
+Content-Type: application/json
+
+{
+  "email": "{{email}}",
+  "resetCode": "{{resetCode}}",
+  "newPassword": "{{newPassword}}"
+}
+
+### 8. Get Current User Info (/auth/me)
+# Retrieves profile information (email, displayName) for the authenticated user
+GET {{baseUrl}}/auth/me
+Authorization: Bearer {{authToken}}
+
+### 9. Update Current User Info (/auth/me)
+# Updates displayName for the authenticated user
+PUT {{baseUrl}}/auth/me
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "displayName": "Jan Kowalski"
+}
+
+### 10. Get Identity Manage Info (/auth/manage/info)
+# Retrieves identity management details (email, 2FA status, etc.)
+GET {{baseUrl}}/auth/manage/info
+Authorization: Bearer {{authToken}}
+
+### 11. Update Identity Manage Info (/auth/manage/info)
+# Updates email or changes password via ASP.NET Core Identity
+POST {{baseUrl}}/auth/manage/info
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "oldPassword": "{{password}}",
+  "newPassword": "{{newPassword}}"
+}
+
+### 12. Manage Two-Factor Authentication (/auth/manage/2fa)
+# Manages 2FA settings for the user
+POST {{baseUrl}}/auth/manage/2fa
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "enable": true,
+  "twoFactorCode": "123456",
+  "resetSharedKey": false,
+  "resetRecoveryCodes": false,
+  "forgetMachine": false
+}

@@ -8,10 +8,11 @@ public interface IModule
 
 public static class ModuleExtensions
 {
-    public static void RegisterModuleServices<TModule>(this IServiceCollection services)
+    public static IServiceCollection RegisterModuleServices<TModule>(this IServiceCollection services)
         where TModule : IModule
     {
         TModule.RegisterServices(services);
+        return services;
     }
 
     public static IEndpointRouteBuilder MapModuleEndpoints<TModule>(this IEndpointRouteBuilder app)

@@ -1,6 +1,6 @@
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.HttpOverrides;
-using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using OpenTelemetry.Metrics;
@@ -39,6 +39,11 @@ try
                 ["service.name"] = Diagnostics.ServiceName
             };
         }));
+
+    builder.Services.AddOutputCache(options =>
+    {
+        options.AddBasePolicy(policy => policy.Expire(TimeSpan.FromMinutes(10)));
+    });
 
     builder.Services.AddOpenApi();
 
@@ -90,6 +95,8 @@ try
         connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
         o => o.MapApplicationEnums(schema: "app")));
 
+    builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
+
     builder.Services.AddIdentityApiEndpoints<AppUser>(options =>
         {
             // The audience is non-technical family members, so we deliberately
@@ -100,10 +107,9 @@ try
             options.Password.RequireUppercase = false;
             options.Password.RequireLowercase = false;
             options.Password.RequireDigit = false;
-
-            options.User.RequireUniqueEmail = true;
         })
-        .AddEntityFrameworkStores<AppDbContext>();
+        .AddEntityFrameworkStores<AppDbContext>()
+        .AddErrorDescriber<LocalizedIdentityErrorDescriber>();
 
     builder.Services.AddAuthentication();
     builder.Services.AddAuthorization();
@@ -126,9 +132,10 @@ try
                 }));
     });
 
-    builder.Services.RegisterModuleServices<AuthModule>();
-    builder.Services.RegisterModuleServices<UserListsModule>();
-    builder.Services.RegisterModuleServices<PublicModule>();
+    builder.Services
+        .RegisterModuleServices<AuthModule>()
+        .RegisterModuleServices<UserListsModule>()
+        .RegisterModuleServices<PublicModule>();
 
     var app = builder.Build();
 
@@ -140,7 +147,8 @@ try
 
     if (app.Environment.IsDevelopment())
     {
-        app.MapOpenApi();
+        app.MapOpenApi("/openapi/{documentName}.yaml")
+            .CacheOutput();
     }
 
     app.MapHealthChecks("health");
@@ -153,12 +161,18 @@ try
 
     app.UseRateLimiter();
 
+    var supportedCultures = new[] { "pl", "pl-PL", "en", "en-US" };
+    app.UseRequestLocalization(options => options
+        .SetDefaultCulture("pl")
+        .AddSupportedCultures(supportedCultures)
+        .AddSupportedUICultures(supportedCultures));
+
     app.UseAuthorization();
 
-    app.MapModuleEndpoints<AuthModule>();
-    app.MapModuleEndpoints<UserListsModule>();
-    app.MapModuleEndpoints<PublicModule>();
-
+    app
+        .MapModuleEndpoints<AuthModule>()
+        .MapModuleEndpoints<UserListsModule>()
+        .MapModuleEndpoints<PublicModule>();
 
     app.Run();
 }

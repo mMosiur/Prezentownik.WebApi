@@ -1,6 +1,6 @@
 <Solution>
   <Folder Name="/docs/">
-    <File Path="docs/openapi.json" />
+    <File Path="docs/openapi.yaml" />
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path=".gitignore" />
