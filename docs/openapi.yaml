@@ -209,6 +209,14 @@ paths:
                 $ref: '#/components/schemas/HttpValidationProblemDetails'
         '404':
           description: Not Found
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      description: Sign the current user out and clear the auth cookie
+      responses:
+        '200':
+          description: OK
   /auth/me:
     get:
       tags:
@@ -590,16 +598,14 @@ paths:
       responses:
         '400':
           description: Bad Request
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/HttpValidationProblemDetails'
         '200':
           description: OK
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/CreateClaimResponse'
+        '403':
+          description: Forbidden
     delete:
       tags:
         - Public
@@ -625,14 +631,40 @@ paths:
       responses:
         '400':
           description: Bad Request
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/HttpValidationProblemDetails'
         '204':
           description: No Content
         '403':
           description: Forbidden
+  /lists/claims/adopt:
+    post:
+      tags:
+        - Public
+      description: Adopt unauthenticated claims by revocation tokens for the current user
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdoptClaimsRequest'
+        required: true
+      responses:
+        '400':
+          description: Bad Request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/HttpValidationProblemDetails'
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdoptClaimsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
 components:
   schemas:
     AccessTokenResponse:
@@ -656,6 +688,27 @@ components:
           format: int64
         refreshToken:
           type: string
+    AdoptClaimsRequest:
+      required:
+        - revocationTokens
+      type: object
+      properties:
+        revocationTokens:
+          type: array
+          items:
+            type: string
+            format: uuid
+    AdoptClaimsResponse:
+      required:
+        - adoptedClaimsCount
+      type: object
+      properties:
+        adoptedClaimsCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     CreateClaimRequest:
       required:
         - quantityClaimed
@@ -889,6 +942,14 @@ components:
             - integer
             - string
           format: int32
+        isMyClaim:
+          type: boolean
+          default: false
+        revocationToken:
+          type:
+            - 'null'
+            - string
+          format: uuid
     PublicItemDto:
       required:
         - id
@@ -935,6 +996,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PublicClaimDto'
+        isClaimedByCurrentUser:
+          type: boolean
+          default: false
     PublicListDto:
       required:
         - name

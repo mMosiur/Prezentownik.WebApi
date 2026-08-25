@@ -1,0 +1,52 @@
+@baseUrl = http://localhost:5000
+@listId = 00000000-0000-0000-0000-000000000001
+@itemId = 00000000-0000-0000-0000-000000000002
+@authToken = your-auth-token-here
+
+### 1. View Public List (Anonymous)
+GET {{baseUrl}}/lists/{{listId}}
+
+### 2. View Public List (Authenticated User)
+GET {{baseUrl}}/lists/{{listId}}
+Authorization: Bearer {{authToken}}
+
+### 3. Claim Gift (Anonymous)
+# @name anonymousClaim
+POST {{baseUrl}}/lists/{{listId}}/items/{{itemId}}/claims
+Content-Type: application/json
+
+{
+  "quantityClaimed": 1,
+  "claimerName": "Anna"
+}
+
+### Extracted revocation token
+@revocationToken = {{anonymousClaim.response.body.revocationToken}}
+
+### 4. Unclaim Gift with Revocation Token (Anonymous)
+DELETE {{baseUrl}}/lists/{{listId}}/items/{{itemId}}/claims?revocationToken={{revocationToken}}
+
+### 5. Claim Gift (Authenticated User)
+POST {{baseUrl}}/lists/{{listId}}/items/{{itemId}}/claims
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "quantityClaimed": 1,
+  "claimerName": "Santa"
+}
+
+### 6. Unclaim Gift (Authenticated User - without revocation token)
+DELETE {{baseUrl}}/lists/{{listId}}/items/{{itemId}}/claims
+Authorization: Bearer {{authToken}}
+
+### 7. Adopt Claims by Revocation Tokens (Authenticated User)
+POST {{baseUrl}}/lists/claims/adopt
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "revocationTokens": [
+    "{{revocationToken}}"
+  ]
+}

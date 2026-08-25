@@ -79,9 +79,7 @@ provider, so no database is required).
 ## Useful endpoints
 
 - `GET /health` — health check (verifies database connectivity).
-- `GET /openapi/v1.json` — OpenAPI document (available when running in the `Development` environment).
-  A static, always-up-to-date copy is also generated on every build at `docs/openapi.json`, which the
-  frontend uses to generate its TypeScript API types.
+- `GET /openapi/v1.yaml` — OpenAPI document (available when running in the `Development` environment).
 
 ## Project layout
 

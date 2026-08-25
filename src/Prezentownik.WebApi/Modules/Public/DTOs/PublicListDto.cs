@@ -1,6 +1,9 @@
 namespace Prezentownik.WebApi.Modules.Public.DTOs;
 
-public record PublicListDto(
+/// <summary>
+/// Represents a public gift list view.
+/// </summary>
+public sealed record PublicListDto(
     string Name,
     string? Description,
     string? OwnerDisplayName,

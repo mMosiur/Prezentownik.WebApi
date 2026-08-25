@@ -1,5 +1,10 @@
 namespace Prezentownik.WebApi.Modules.Public.DTOs;
 
-public record PublicClaimDto(
+/// <summary>
+/// Represents a claim on a gift item in a public list.
+/// </summary>
+public sealed record PublicClaimDto(
     string? ClaimerName,
-    int QuantityClaimed);
+    int QuantityClaimed,
+    bool IsMyClaim = false,
+    Guid? RevocationToken = null);

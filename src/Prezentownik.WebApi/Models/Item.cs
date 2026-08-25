@@ -54,7 +54,7 @@ public class Item
             type: ItemType.Limitless,
             targetQuantity: null);
 
-    public void AddClaim(int quantity, string? claimerName)
+    public void AddClaim(int quantity, string? claimerName, string? claimerId = null)
     {
         if (quantity <= 0)
         {
@@ -68,12 +68,28 @@ public class Item
             throw new InvalidOperationException("Total quantity claimed exceeds target quantity.");
         }
 
-        Claims.Add(GiftClaim.CreateNew(quantity, claimerName));
+        Claims.Add(GiftClaim.CreateNew(quantity, claimerName, claimerId));
     }
 
-    public void RemoveClaim(Guid revocationToken)
+    public void RemoveClaim(Guid revocationToken, string? claimerId = null)
     {
         var claim = Claims.FirstOrDefault(c => c.RevocationToken == revocationToken);
+        if (claim is null)
+        {
+            throw new InvalidOperationException("Claim not found or invalid revocation token.");
+        }
+
+        if (claim.ClaimerId is not null && claimerId is not null && claim.ClaimerId != claimerId)
+        {
+            throw new InvalidOperationException("Cannot revoke claim belonging to another user.");
+        }
+
+        Claims.Remove(claim);
+    }
+
+    public void RemoveClaimByClaimerId(string claimerId)
+    {
+        var claim = Claims.FirstOrDefault(c => c.ClaimerId == claimerId);
         if (claim is null)
         {
             throw new InvalidOperationException("Claim not found or invalid revocation token.");

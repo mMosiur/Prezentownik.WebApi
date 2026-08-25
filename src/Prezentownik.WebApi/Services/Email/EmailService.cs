@@ -12,10 +12,13 @@ public sealed partial class EmailService : IEmailService
     public EmailService(ILogger<EmailService> logger, IConfiguration configuration)
     {
         _logger = logger;
-        _senderAddress = configuration["AzureCommunicationServices:SenderAddress"]
-            ?? throw new InvalidOperationException("AzureCommunicationServices:SenderAddress is not configured.");
-        var connectionString = configuration["AzureCommunicationServices:ConnectionString"]
-            ?? throw new InvalidOperationException("AzureCommunicationServices:ConnectionString is not configured.");
+        _senderAddress = configuration["AzureCommunicationServices:SenderAddress"] ?? "donotreply@dummy.com";
+        var connectionString = configuration["AzureCommunicationServices:ConnectionString"];
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            connectionString = "endpoint=https://dummy.communication.azure.com/;accesskey=dummy";
+        }
+
         _emailClient = new(connectionString);
     }
 

@@ -1,4 +1,7 @@
 namespace Prezentownik.WebApi.Modules.Public.DTOs;
 
-public record CreateClaimResponse(
+/// <summary>
+/// Response returned when a gift item is claimed.
+/// </summary>
+public sealed record CreateClaimResponse(
     Guid RevocationToken);
