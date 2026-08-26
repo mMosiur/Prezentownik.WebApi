@@ -77,9 +77,14 @@ try
     builder.Services.AddHealthChecks()
         .AddCheck<DatabaseHealthCheck>("database");
 
-    builder.Services.AddOpenTelemetry()
-        .UseAzureMonitor()
-        .ConfigureResource(resource => resource.AddService(Diagnostics.ServiceName))
+    var otel = builder.Services.AddOpenTelemetry();
+
+    if (builder.Environment.IsProduction())
+    {
+        otel.UseAzureMonitor();
+    }
+
+    otel.ConfigureResource(resource => resource.AddService(Diagnostics.ServiceName))
         .WithTracing(tracing => tracing
             .AddSource(Diagnostics.ServiceName)
             .AddAspNetCoreInstrumentation()

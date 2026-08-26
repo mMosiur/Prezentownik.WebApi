@@ -7,7 +7,7 @@ services:
     container_name: prezentownik_postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_PASSWORD: admin
       POSTGRES_DB: prezentownik
     ports:
       - "5432:5432"

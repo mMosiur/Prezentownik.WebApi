@@ -813,4 +813,8 @@ notes/*
 # Private HTTP client environment variables
 http-client.private.env.json
 
+# Env file
+
+.env*
+
 # End of https://www.toptal.com/developers/gitignore/api/csharp,dotnetcore,rider,visualstudiocode,visualstudio,aspnetcore
