@@ -1,4 +1,5 @@
 using System.Threading.RateLimiting;
+using Azure.Monitor.OpenTelemetry.AspNetCore;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -77,6 +78,7 @@ try
         .AddCheck<DatabaseHealthCheck>("database");
 
     builder.Services.AddOpenTelemetry()
+        .UseAzureMonitor()
         .ConfigureResource(resource => resource.AddService(Diagnostics.ServiceName))
         .WithTracing(tracing => tracing
             .AddSource(Diagnostics.ServiceName)
