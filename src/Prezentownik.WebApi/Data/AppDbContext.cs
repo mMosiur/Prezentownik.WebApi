@@ -101,14 +101,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             claims.Property(c => c.QuantityClaimed)
                 .IsRequired();
 
-            claims.Property(gl => gl.ClaimerId)
+            claims.Property(gl => gl.ClaimantId)
                 .HasMaxLength(64);
 
-            claims.HasOne(gl => gl.Claimer)
+            claims.HasOne(gl => gl.Claimant)
                 .WithMany()
-                .HasForeignKey(gl => gl.ClaimerId);
+                .HasForeignKey(gl => gl.ClaimantId);
 
-            claims.Property(c => c.ClaimerName)
+            claims.Property(c => c.ClaimantName)
                 .HasMaxLength(64);
 
             claims.Property(c => c.RevocationToken);

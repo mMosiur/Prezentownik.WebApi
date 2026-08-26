@@ -53,7 +53,7 @@ public static class PublicEndpoints
             .Include(l => l.Owner)
             .Include(l => l.Items)
             .ThenInclude(l => l.Claims)
-            .ThenInclude(c => c.Claimer)
+            .ThenInclude(c => c.Claimant)
             .FirstOrDefaultAsync(l => l.Id == listId, cancellationToken);
 
         if (giftList is null) return Results.NotFound();
@@ -75,8 +75,8 @@ public static class PublicEndpoints
     {
         var userId = principal.GetUserId();
 
-        Log.Information("Claiming gift {ItemId} from public list {ListId} (UserId: {UserId}, Claimer name: {ClaimerName}, quantity: {ClaimQuantity})",
-            itemId, listId, userId, request.ClaimerName, request.QuantityClaimed);
+        Log.Information("Claiming gift {ItemId} from public list {ListId} (UserId: {UserId}, Claimant name: {ClaimantName}, quantity: {ClaimQuantity})",
+            itemId, listId, userId, request.ClaimantName, request.QuantityClaimed);
 
         var giftList = await dbContext.GiftLists
             .Include(l => l.Owner)
@@ -96,8 +96,8 @@ public static class PublicEndpoints
 
         try
         {
-            var claimerName = string.IsNullOrWhiteSpace(request.ClaimerName) ? null : request.ClaimerName.Trim();
-            item.AddClaim(request.QuantityClaimed, claimerName, userId);
+            var claimantName = string.IsNullOrWhiteSpace(request.ClaimantName) ? null : request.ClaimantName.Trim();
+            item.AddClaim(request.QuantityClaimed, claimantName, userId);
         }
         catch (InvalidOperationException ex)
         {
@@ -151,7 +151,7 @@ public static class PublicEndpoints
             }
             else
             {
-                item.RemoveClaimByClaimerId(userId!);
+                item.RemoveClaimByClaimantId(userId!);
             }
         }
         catch (InvalidOperationException ex)
@@ -172,7 +172,7 @@ public static class PublicEndpoints
 
         if (request.RevocationTokens is null || request.RevocationTokens.Count == 0)
         {
-            return Results.Ok(new AdoptClaimsResponse(0));
+            return Results.Ok(new AdoptClaimsResponse([]));
         }
 
         var distinctTokens = request.RevocationTokens.Distinct().ToList();
@@ -182,10 +182,10 @@ public static class PublicEndpoints
         var claims = await dbContext.GiftClaims
             .Include(c => c.Item)
             .ThenInclude(i => i.GiftList)
-            .Where(c => distinctTokens.Contains(c.RevocationToken))
+            .Where(c => c.RevocationToken != null && distinctTokens.Contains(c.RevocationToken.Value))
             .ToListAsync(cancellationToken);
 
-        var adoptedCount = 0;
+        var adoptedClaims = new List<Guid>();
         foreach (var claim in claims)
         {
             if (claim.Item.GiftList.OwnerId == userId)
@@ -193,25 +193,25 @@ public static class PublicEndpoints
                 continue;
             }
 
-            if (claim.ClaimerId is not null && claim.ClaimerId != userId)
+            if (claim.ClaimantId is not null && claim.ClaimantId != userId)
             {
                 continue;
             }
 
-            if (claim.ClaimerId is null)
+            if (claim.ClaimantId is null)
             {
                 claim.AssignToUser(userId);
-                adoptedCount++;
+                adoptedClaims.Add(claim.RevocationToken!.Value);
             }
         }
 
-        if (adoptedCount > 0)
+        if (adoptedClaims.Count > 0)
         {
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
-        Log.Information("Successfully adopted {AdoptedCount} claims for user {UserId}", adoptedCount, userId);
+        Log.Information("Successfully adopted {AdoptedCount} claims for user {UserId}", adoptedClaims.Count, userId);
 
-        return Results.Ok(new AdoptClaimsResponse(adoptedCount));
+        return Results.Ok(new AdoptClaimsResponse(adoptedClaims));
     }
 }

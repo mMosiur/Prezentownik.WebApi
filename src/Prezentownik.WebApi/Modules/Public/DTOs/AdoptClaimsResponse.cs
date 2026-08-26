@@ -4,4 +4,4 @@ namespace Prezentownik.WebApi.Modules.Public.DTOs;
 /// Response containing results of claim adoption.
 /// </summary>
 public sealed record AdoptClaimsResponse(
-    int AdoptedClaimsCount);
+    List<Guid> AdoptedClaimsRevocationTokens);

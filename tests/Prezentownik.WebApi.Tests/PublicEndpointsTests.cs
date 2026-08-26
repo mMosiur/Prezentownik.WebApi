@@ -19,6 +19,7 @@ public class PublicEndpointsTests
             .Options;
 
         return new AppDbContext(options);
+        // TestContext.Current.CancellationToken
     }
 
     private static ClaimsPrincipal CreatePrincipal(string? userId)
@@ -65,7 +66,7 @@ public class PublicEndpointsTests
         dbContext.Users.Add(CreateOwnerUser(ownerId));
         var giftList = GiftList.CreateNew("Birthday Wishlist", "Please and thank you", ownerId);
         var item = Item.CreateFromRequest("Headphones", null, 1, Models.Enums.ItemType.Limited, 2);
-        item.AddClaim(1, "Aunt Mary");
+        item.AddClaim(1, "Aunt Mary", null);
         giftList.Items.Add(item);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
@@ -77,7 +78,7 @@ public class PublicEndpointsTests
         Assert.Equal("Birthday Wishlist", okResult.Value!.Name);
         Assert.Single(okResult.Value.Items);
         Assert.Single(okResult.Value.Items[0].Claims);
-        Assert.Equal("Aunt Mary", okResult.Value.Items[0].Claims[0].ClaimerName);
+        Assert.Equal("Aunt Mary", okResult.Value.Items[0].Claims[0].ClaimantName);
     }
 
     [Fact]
@@ -134,11 +135,11 @@ public class PublicEndpointsTests
         var okResult = Assert.IsType<Ok<CreateClaimResponse>>(result, exactMatch: false);
         Assert.NotEqual(Guid.Empty, okResult.Value!.RevocationToken);
 
-        using var verifyContext = CreateDbContext(dbName);
+        await using var verifyContext = CreateDbContext(dbName);
         var savedItem = await verifyContext.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);
         Assert.Single(savedItem.Claims);
-        Assert.Equal("Uncle Bob", savedItem.Claims[0].ClaimerName);
-        Assert.Equal("someone_else", savedItem.Claims[0].ClaimerId);
+        Assert.Equal("Uncle Bob", savedItem.Claims[0].ClaimantName);
+        Assert.Equal("someone_else", savedItem.Claims[0].ClaimantId);
     }
 
     [Fact]
@@ -188,8 +189,8 @@ public class PublicEndpointsTests
         Assert.True(retrievedItem.IsClaimedByCurrentUser);
         Assert.Single(retrievedItem.Claims);
         Assert.True(retrievedItem.Claims[0].IsMyClaim);
-        Assert.NotNull(retrievedItem.Claims[0].RevocationToken);
-        Assert.Equal("Claimant Name", retrievedItem.Claims[0].ClaimerName);
+        Assert.Null(retrievedItem.Claims[0].RevocationToken);
+        Assert.Equal("Claimant Name", retrievedItem.Claims[0].ClaimantName);
     }
 
     [Fact]
@@ -214,7 +215,7 @@ public class PublicEndpointsTests
 
         Assert.IsType<NoContent>(result, exactMatch: false);
 
-        using var verifyContext = CreateDbContext(dbName);
+        await using var verifyContext = CreateDbContext(dbName);
         var savedItem = await verifyContext.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);
         Assert.Empty(savedItem.Claims);
     }
@@ -257,7 +258,7 @@ public class PublicEndpointsTests
         dbContext.Users.Add(CreateOwnerUser(ownerId));
         var giftList = GiftList.CreateNew("Birthday Wishlist", null, ownerId);
         var item = Item.CreateFromRequest("Headphones", null, 1, Models.Enums.ItemType.Singular, 1);
-        item.AddClaim(1, "Anonymous");
+        item.AddClaim(1, "Anonymous", null);
         giftList.Items.Add(item);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
@@ -280,7 +281,7 @@ public class PublicEndpointsTests
         dbContext.Users.Add(CreateOwnerUser(ownerId));
         var giftList = GiftList.CreateNew("Birthday Wishlist", null, ownerId);
         var item = Item.CreateFromRequest("Headphones", null, 1, Models.Enums.ItemType.Singular, 1);
-        item.AddClaim(1, "Uncle Bob");
+        item.AddClaim(1, "Uncle Bob", null);
         giftList.Items.Add(item);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
@@ -303,7 +304,7 @@ public class PublicEndpointsTests
         dbContext.Users.Add(CreateOwnerUser(ownerId));
         var giftList = GiftList.CreateNew("Birthday Wishlist", null, ownerId);
         var item = Item.CreateFromRequest("Headphones", null, 1, Models.Enums.ItemType.Limited, 2);
-        item.AddClaim(1, "Uncle Bob");
+        item.AddClaim(1, "Uncle Bob", null);
         giftList.Items.Add(item);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
@@ -315,7 +316,7 @@ public class PublicEndpointsTests
 
         Assert.IsType<NoContent>(result, exactMatch: false);
 
-        using var verifyContext = CreateDbContext(dbName);
+        await using var verifyContext = CreateDbContext(dbName);
         var savedItem = await verifyContext.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);
         Assert.Empty(savedItem.Claims);
     }
@@ -330,7 +331,7 @@ public class PublicEndpointsTests
         dbContext.Users.Add(CreateOwnerUser(ownerId));
         var giftList = GiftList.CreateNew("Birthday Wishlist", null, ownerId);
         var item = Item.CreateFromRequest("Headphones", null, 1, Models.Enums.ItemType.Limited, 2);
-        item.AddClaim(1, "Uncle Bob");
+        item.AddClaim(1, "Uncle Bob", null);
         giftList.Items.Add(item);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
@@ -360,22 +361,22 @@ public class PublicEndpointsTests
         var list1 = GiftList.CreateNew("List 1", null, owner1Id);
         var item1 = Item.CreateFromRequest("Item 1", null, 1, Models.Enums.ItemType.Singular, 1);
         var item2 = Item.CreateFromRequest("Item 2", null, 2, Models.Enums.ItemType.Singular, 1);
-        item1.AddClaim(1, "Claimer 1");
-        item2.AddClaim(1, "Claimer 2");
+        item1.AddClaim(1, "Claimant 1", null);
+        item2.AddClaim(1, "Claimant 2", null);
         list1.Items.Add(item1);
         list1.Items.Add(item2);
 
         var list2 = GiftList.CreateNew("List 2", null, owner2Id);
         var item3 = Item.CreateFromRequest("Item 3", null, 1, Models.Enums.ItemType.Singular, 1);
-        item3.AddClaim(1, "Claimer 3");
+        item3.AddClaim(1, "Claimant 3", null);
         list2.Items.Add(item3);
 
         dbContext.GiftLists.AddRange(list1, list2);
         await dbContext.SaveChangesAsync();
 
-        var token1 = item1.Claims[0].RevocationToken;
-        var token2 = item2.Claims[0].RevocationToken;
-        var token3 = item3.Claims[0].RevocationToken;
+        var token1 = Assert.NotNull(item1.Claims[0].RevocationToken);
+        var token2 = Assert.NotNull(item2.Claims[0].RevocationToken);
+        var token3 = Assert.NotNull(item3.Claims[0].RevocationToken);
 
         var request = new AdoptClaimsRequest([token1, token2, token3]);
         var userPrincipal = CreatePrincipal(userId);
@@ -383,55 +384,15 @@ public class PublicEndpointsTests
         var result = await PublicEndpoints.AdoptClaims(request, userPrincipal, dbContext, CancellationToken.None);
 
         var okResult = Assert.IsType<Ok<AdoptClaimsResponse>>(result, exactMatch: false);
-        Assert.Equal(3, okResult.Value!.AdoptedClaimsCount);
+        Assert.Collection(okResult.Value!.AdoptedClaimsRevocationTokens,
+            adoptedToken1 => Assert.Equal(token1, adoptedToken1),
+            adoptedToken2 => Assert.Equal(token2, adoptedToken2),
+            adoptedToken3 => Assert.Equal(token3, adoptedToken3));
 
-        using var verifyContext = CreateDbContext(dbName);
+        await using var verifyContext = CreateDbContext(dbName);
         var claims = await verifyContext.GiftClaims.ToListAsync();
         Assert.Equal(3, claims.Count);
-        Assert.All(claims, c => Assert.Equal(userId, c.ClaimerId));
-    }
-
-    [Fact]
-    public async Task AdoptClaims_WhenClaimBelongsToAnotherUser_ShouldNotOverwriteClaimerId()
-    {
-        var dbName = Guid.NewGuid().ToString();
-        var ownerId = "owner_1";
-        var existingClaimantId = "existing_user";
-        var newUserId = "new_user";
-
-        await using var dbContext = CreateDbContext(dbName);
-        dbContext.Users.Add(CreateOwnerUser(ownerId));
-        dbContext.Users.Add(new AppUser { Id = existingClaimantId, UserName = existingClaimantId });
-        dbContext.Users.Add(new AppUser { Id = newUserId, UserName = newUserId });
-
-        var list = GiftList.CreateNew("List", null, ownerId);
-        var item1 = Item.CreateFromRequest("Item 1", null, 1, Models.Enums.ItemType.Singular, 1);
-        var item2 = Item.CreateFromRequest("Item 2", null, 2, Models.Enums.ItemType.Singular, 1);
-        item1.AddClaim(1, "Existing", existingClaimantId);
-        item2.AddClaim(1, "Anonymous");
-        list.Items.Add(item1);
-        list.Items.Add(item2);
-
-        dbContext.GiftLists.Add(list);
-        await dbContext.SaveChangesAsync();
-
-        var token1 = item1.Claims[0].RevocationToken;
-        var token2 = item2.Claims[0].RevocationToken;
-
-        var request = new AdoptClaimsRequest([token1, token2]);
-        var userPrincipal = CreatePrincipal(newUserId);
-
-        var result = await PublicEndpoints.AdoptClaims(request, userPrincipal, dbContext, CancellationToken.None);
-
-        var okResult = Assert.IsType<Ok<AdoptClaimsResponse>>(result, exactMatch: false);
-        Assert.Equal(1, okResult.Value!.AdoptedClaimsCount);
-
-        using var verifyContext = CreateDbContext(dbName);
-        var savedItem1 = await verifyContext.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item1.Id);
-        var savedItem2 = await verifyContext.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item2.Id);
-
-        Assert.Equal(existingClaimantId, savedItem1.Claims[0].ClaimerId);
-        Assert.Equal(newUserId, savedItem2.Claims[0].ClaimerId);
+        Assert.All(claims, c => Assert.Equal(userId, c.ClaimantId));
     }
 
     [Fact]
@@ -445,24 +406,24 @@ public class PublicEndpointsTests
 
         var list = GiftList.CreateNew("List", null, ownerId);
         var item = Item.CreateFromRequest("Item 1", null, 1, Models.Enums.ItemType.Singular, 1);
-        item.AddClaim(1, "Anonymous");
+        item.AddClaim(1, "Anonymous", null);
         list.Items.Add(item);
 
         dbContext.GiftLists.Add(list);
         await dbContext.SaveChangesAsync();
 
-        var token = item.Claims[0].RevocationToken;
+        var token = Assert.NotNull(item.Claims[0].RevocationToken);
         var request = new AdoptClaimsRequest([token]);
         var ownerPrincipal = CreatePrincipal(ownerId);
 
         var result = await PublicEndpoints.AdoptClaims(request, ownerPrincipal, dbContext, CancellationToken.None);
 
         var okResult = Assert.IsType<Ok<AdoptClaimsResponse>>(result, exactMatch: false);
-        Assert.Equal(0, okResult.Value!.AdoptedClaimsCount);
+        Assert.Empty(okResult.Value!.AdoptedClaimsRevocationTokens);
 
-        using var verifyContext = CreateDbContext(dbName);
+        await using var verifyContext = CreateDbContext(dbName);
         var savedItem = await verifyContext.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);
-        Assert.Null(savedItem.Claims[0].ClaimerId);
+        Assert.Null(savedItem.Claims[0].ClaimantId);
     }
 
     [Fact]
@@ -479,11 +440,11 @@ public class PublicEndpointsTests
 
         var emptyResult = await PublicEndpoints.AdoptClaims(new AdoptClaimsRequest([]), userPrincipal, dbContext, CancellationToken.None);
         var emptyOk = Assert.IsType<Ok<AdoptClaimsResponse>>(emptyResult, exactMatch: false);
-        Assert.Equal(0, emptyOk.Value!.AdoptedClaimsCount);
+        Assert.Empty(emptyOk.Value!.AdoptedClaimsRevocationTokens);
 
         var nonExistentResult = await PublicEndpoints.AdoptClaims(new AdoptClaimsRequest([Guid.NewGuid(), Guid.NewGuid()]), userPrincipal, dbContext, CancellationToken.None);
         var nonExistentOk = Assert.IsType<Ok<AdoptClaimsResponse>>(nonExistentResult, exactMatch: false);
-        Assert.Equal(0, nonExistentOk.Value!.AdoptedClaimsCount);
+        Assert.Empty(nonExistentOk.Value!.AdoptedClaimsRevocationTokens);
     }
 
     [Fact]

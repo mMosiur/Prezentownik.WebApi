@@ -10,31 +10,40 @@ public class GiftClaim
 
     public required int QuantityClaimed { get; init; }
 
-    public string? ClaimerId { get; set; }
-    public AppUser? Claimer { get; init; }
+    public string? ClaimantId { get; set; }
+    public AppUser? Claimant { get; init; }
 
-    public required string? ClaimerName { get; init; }
+    public string? ClaimantName { get; init; }
 
-    public required Guid RevocationToken { get; init; }
+    public Guid? RevocationToken { get; init; }
 
     public void AssignToUser(string userId)
     {
-        if (ClaimerId is not null && ClaimerId != userId)
+        if (ClaimantId is not null && ClaimantId != userId)
         {
             throw new InvalidOperationException("Claim is already assigned to another user.");
         }
 
-        ClaimerId = userId;
+        ClaimantId = userId;
     }
 
-    public static GiftClaim CreateNew(int quantityClaimed, string? claimerName, string? claimerId = null)
+    public static GiftClaim CreateNewForUnauthenticated(int quantityClaimed, string? claimantName)
     {
         return new()
         {
             QuantityClaimed = quantityClaimed,
-            ClaimerName = claimerName,
-            ClaimerId = claimerId,
+            ClaimantName = claimantName,
             RevocationToken = Guid.CreateVersion7()
+        };
+    }
+
+    public static GiftClaim CreateNewForUser(int quantityClaimed, string? claimantName, string claimantId)
+    {
+        return new()
+        {
+            QuantityClaimed = quantityClaimed,
+            ClaimantName = claimantName,
+            ClaimantId = claimantId,
         };
     }
 }

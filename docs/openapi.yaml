@@ -700,19 +700,18 @@ components:
             format: uuid
     AdoptClaimsResponse:
       required:
-        - adoptedClaimsCount
+        - adoptedClaimsRevocationTokens
       type: object
       properties:
-        adoptedClaimsCount:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
+        adoptedClaimsRevocationTokens:
+          type: array
+          items:
+            type: string
+            format: uuid
     CreateClaimRequest:
       required:
         - quantityClaimed
-        - claimerName
+        - claimantName
       type: object
       properties:
         quantityClaimed:
@@ -721,7 +720,7 @@ components:
             - integer
             - string
           format: int32
-        claimerName:
+        claimantName:
           type:
             - 'null'
             - string
@@ -731,7 +730,9 @@ components:
       type: object
       properties:
         revocationToken:
-          type: string
+          type:
+            - 'null'
+            - string
           format: uuid
     CreateGiftListRequest:
       required:
@@ -928,11 +929,11 @@ components:
             - string
     PublicClaimDto:
       required:
-        - claimerName
+        - claimantName
         - quantityClaimed
       type: object
       properties:
-        claimerName:
+        claimantName:
           type:
             - 'null'
             - string

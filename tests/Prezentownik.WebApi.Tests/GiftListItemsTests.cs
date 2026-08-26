@@ -140,7 +140,7 @@ public class GiftListItemsTests
             .FirstAsync(g => g.Id == giftList.Id);
 
         var trackedItem = trackedList.Items.First();
-        trackedItem.AddClaim(2, "Alice");
+        trackedItem.AddClaim(2, "Alice", null);
 
         context2.ChangeTracker.DetectChanges();
         var claim = trackedItem.Claims.Last();
@@ -157,7 +157,7 @@ public class GiftListItemsTests
         var reloadedItem = await context3.Items.Include(i => i.Claims).FirstAsync(i => i.Id == trackedItem.Id);
         Assert.Single(reloadedItem.Claims);
         Assert.Equal(2, reloadedItem.Claims.First().QuantityClaimed);
-        Assert.Equal("Alice", reloadedItem.Claims.First().ClaimerName);
+        Assert.Equal("Alice", reloadedItem.Claims.First().ClaimantName);
         Assert.Equal(claim.Id, reloadedItem.Claims.First().Id);
     }
 
@@ -169,13 +169,13 @@ public class GiftListItemsTests
         using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
         var item = Item.CreateFromRequest("Board Games", null, 1, ItemType.Limited, 3);
-        item.AddClaim(1, "Bob");
+        item.AddClaim(1, "Bob", null);
         giftList.Items.Add(item);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
 
         var claim = item.Claims.First();
-        var revocationToken = claim.RevocationToken;
+        var revocationToken = Assert.NotNull(claim.RevocationToken);
 
         using var context2 = CreateDbContext(dbName);
         var trackedItem = await context2.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);

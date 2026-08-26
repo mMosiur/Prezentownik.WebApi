@@ -23,7 +23,7 @@ internal static class PublicMapper
             item.OrderNumber,
             item.TotalClaimsQuantity,
             [.. item.Claims.Select(c => MapToPublicClaimDto(c, currentUserId))],
-            IsClaimedByCurrentUser: currentUserId is not null && item.Claims.Any(c => c.ClaimerId == currentUserId));
+            IsClaimedByCurrentUser: currentUserId is not null && item.Claims.Any(c => c.ClaimantId == currentUserId));
 
     private static Dto.ItemType MapItemType(ItemType itemType)
         => itemType switch
@@ -36,10 +36,10 @@ internal static class PublicMapper
 
     private static Dto.PublicClaimDto MapToPublicClaimDto(GiftClaim giftClaim, string? currentUserId = null)
     {
-        var isMyClaim = currentUserId is not null && giftClaim.ClaimerId == currentUserId;
-        var claimerName = giftClaim.ClaimerName ?? giftClaim.Claimer?.DisplayName;
+        var isMyClaim = currentUserId is not null && giftClaim.ClaimantId == currentUserId;
+        var claimantName = giftClaim.ClaimantName ?? giftClaim.Claimant?.DisplayName;
         return new(
-            claimerName,
+            claimantName,
             giftClaim.QuantityClaimed,
             IsMyClaim: isMyClaim,
             RevocationToken: isMyClaim ? giftClaim.RevocationToken : null);

@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Security.AccessControl;
 using Prezentownik.WebApi.Models.Enums;
 
 namespace Prezentownik.WebApi.Models;
@@ -54,24 +55,23 @@ public class Item
             type: ItemType.Limitless,
             targetQuantity: null);
 
-    public void AddClaim(int quantity, string? claimerName, string? claimerId = null)
+    public GiftClaim AddClaim(int quantity, string? claimantName, string? claimantId)
     {
         if (quantity <= 0)
         {
             throw new InvalidOperationException("Quantity to claim must be greater than zero.");
         }
 
-        var newTotalQuantity = TotalClaimsQuantity + quantity;
+        var newClaim = claimantId is null
+            ? GiftClaim.CreateNewForUnauthenticated(quantity, claimantName)
+            : GiftClaim.CreateNewForUser(quantity, claimantName, claimantId);
 
-        if (TargetQuantity.HasValue && newTotalQuantity > TargetQuantity.Value)
-        {
-            throw new InvalidOperationException("Total quantity claimed exceeds target quantity.");
-        }
+        Claims.Add(newClaim);
 
-        Claims.Add(GiftClaim.CreateNew(quantity, claimerName, claimerId));
+        return newClaim;
     }
 
-    public void RemoveClaim(Guid revocationToken, string? claimerId = null)
+    public void RemoveClaim(Guid revocationToken, string? claimantId = null)
     {
         var claim = Claims.FirstOrDefault(c => c.RevocationToken == revocationToken);
         if (claim is null)
@@ -79,7 +79,7 @@ public class Item
             throw new InvalidOperationException("Claim not found or invalid revocation token.");
         }
 
-        if (claim.ClaimerId is not null && claimerId is not null && claim.ClaimerId != claimerId)
+        if (claim.ClaimantId is not null && claimantId is not null && claim.ClaimantId != claimantId)
         {
             throw new InvalidOperationException("Cannot revoke claim belonging to another user.");
         }
@@ -87,9 +87,9 @@ public class Item
         Claims.Remove(claim);
     }
 
-    public void RemoveClaimByClaimerId(string claimerId)
+    public void RemoveClaimByClaimantId(string claimantId)
     {
-        var claim = Claims.FirstOrDefault(c => c.ClaimerId == claimerId);
+        var claim = Claims.FirstOrDefault(c => c.ClaimantId == claimantId);
         if (claim is null)
         {
             throw new InvalidOperationException("Claim not found or invalid revocation token.");

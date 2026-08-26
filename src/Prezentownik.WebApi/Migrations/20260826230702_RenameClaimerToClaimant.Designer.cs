@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Prezentownik.WebApi.Data;
@@ -12,9 +13,11 @@ using Prezentownik.WebApi.Models.Enums;
 namespace Prezentownik.WebApi.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826230702_RenameClaimerToClaimant")]
+    partial class RenameClaimerToClaimant
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -245,7 +248,7 @@ namespace Prezentownik.WebApi.Migrations
                     b.Property<int>("QuantityClaimed")
                         .HasColumnType("integer");
 
-                    b.Property<Guid?>("RevocationToken")
+                    b.Property<Guid>("RevocationToken")
                         .HasColumnType("uuid");
 
                     b.HasKey("Id");
