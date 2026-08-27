@@ -42,12 +42,14 @@ service above, so no extra configuration is needed for local development.
 ### 3. Apply database migrations
 
 Migrations are not applied automatically on startup, so run this once against a fresh database (and again
-whenever a new migration is added):
+whenever a new migration is added locally):
 
 ```powershell
 cd src/Prezentownik.WebApi
 dotnet ef database update
 ```
+
+In the CD deployment pipeline (`.github/workflows/main_prezentownik-api.yml`), EF Core migration bundles are automatically generated during build and executed against the target database before deploying the API.
 
 ## Email verification
 
