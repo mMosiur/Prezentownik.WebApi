@@ -26,7 +26,7 @@ Log.Logger = new LoggerConfiguration()
 
 try
 {
-    Log.Information("Starting web host");
+    Log.Information("Building web host");
     var builder = WebApplication.CreateBuilder(args);
 
     builder.Services.AddProblemDetails();
@@ -149,6 +149,7 @@ try
         .RegisterModule<UserListsModule>()
         .RegisterModule<PublicModule>();
 
+    Log.Information("Configuring web host");
     var app = builder.Build();
 
     app.UseForwardedHeaders(new()
@@ -187,6 +188,7 @@ try
         .MapModuleEndpoints<UserListsModule>()
         .MapModuleEndpoints<PublicModule>();
 
+    Log.Information("Starting web host");
     app.Run();
 }
 catch (Exception ex) when (ex is not HostAbortedException)

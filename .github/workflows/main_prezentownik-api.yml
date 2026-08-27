@@ -94,11 +94,10 @@ jobs:
           subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_6C82ABBB991F4CB2A707F8CEAC85B11A }}
 
       - name: Apply database migrations
+        env:
+          CONNECTION_STRING: ${{ secrets.DATABASE_CONNECTION_STRING }}
         run: |
           chmod +x ./bundle/efbundle
-          
-          CONNECTION_STRING="${{ secrets.DATABASE_CONNECTION_STRING }}"
-          
           echo "::add-mask::$CONNECTION_STRING"
           ./bundle/efbundle --connection "$CONNECTION_STRING"
 
