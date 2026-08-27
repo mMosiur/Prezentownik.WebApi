@@ -50,6 +50,8 @@ jobs:
         run: dotnet tool install --global dotnet-ef
 
       - name: Create EF Core migration bundle
+        env:
+          ConnectionStrings__DefaultConnection: ${{ secrets.DATABASE_CONNECTION_STRING }}
         run: dotnet ef migrations bundle --project src/Prezentownik.WebApi/Prezentownik.WebApi.csproj --startup-project src/Prezentownik.WebApi/Prezentownik.WebApi.csproj --configuration Release --self-contained -r linux-x64 -o ${{env.DOTNET_ROOT}}/bundle/efbundle
 
       - name: dotnet publish
