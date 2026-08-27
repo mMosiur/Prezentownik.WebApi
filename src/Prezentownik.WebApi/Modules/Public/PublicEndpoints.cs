@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net.Mime;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
@@ -37,6 +38,7 @@ public static class PublicEndpoints
             .WithDescription("Unclaim a gift");
 
         group.MapPost("/claims/adopt", AdoptClaims)
+            .RequireAuthorization() // Adopting claims requires authentication
             .Accepts<AdoptClaimsRequest>(MediaTypeNames.Application.Json)
             .Produces<AdoptClaimsResponse>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status401Unauthorized)
@@ -167,8 +169,7 @@ public static class PublicEndpoints
     internal static async Task<IResult> AdoptClaims(AdoptClaimsRequest request,
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
     {
-        var userId = principal.GetUserId();
-        if (userId is null) return Results.Unauthorized();
+        var userId = principal.GetRequiredUserId();
 
         if (request.RevocationTokens is not { Count: > 0 })
         {
@@ -185,25 +186,17 @@ public static class PublicEndpoints
             .Where(c => c.RevocationToken != null && distinctTokens.Contains(c.RevocationToken.Value))
             .ToListAsync(cancellationToken);
 
+        var filteredClaims = claims
+            .Where(c => c.Item.GiftList.OwnerId != userId)
+            .Where(c => c.ClaimantId is null || c.ClaimantId == userId)
+            .ToList();
+
         var adoptedClaims = new List<Guid>();
-        foreach (var claim in claims)
+        foreach (var claim in filteredClaims)
         {
-            if (claim.Item.GiftList.OwnerId == userId)
-            {
-                continue;
-            }
-
-            if (claim.ClaimantId is not null && claim.ClaimantId != userId)
-            {
-                continue;
-            }
-
-            if (claim.ClaimantId is null)
-            {
-                var revocationToken = claim.RevocationToken!.Value;
-                claim.AssignToUser(userId);
-                adoptedClaims.Add(revocationToken);
-            }
+            var revocationToken = claim.RevocationToken!.Value;
+            claim.AssignToUser(userId);
+            adoptedClaims.Add(revocationToken);
         }
 
         if (adoptedClaims.Count > 0)
