@@ -8,6 +8,7 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
+    <File Path="src/Prezentownik.Benchmarks.cs" />
     <Project Path="src/Prezentownik.WebApi/Prezentownik.WebApi.csproj" />
   </Folder>
   <Folder Name="/tests/">
