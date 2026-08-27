@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Prezentownik.WebApi.Data;
 using Prezentownik.WebApi.Extensions;
 using Prezentownik.WebApi.Models;
+using Prezentownik.WebApi.Modules.Commons.DTOs;
 using Prezentownik.WebApi.Modules.UserLists.DTOs;
 using Serilog;
 
@@ -235,17 +236,17 @@ public static class UserListsEndpoints
 
         if (request.ItemIds is null)
         {
-            return Results.BadRequest(new { message = "Item IDs list is required." });
+            return Results.BadRequest(new ErrorMessage("Item IDs list is required."));
         }
 
         if (request.ItemIds.Count != giftList.Items.Count)
         {
-            return Results.BadRequest(new { message = "The number of item IDs does not match the number of items in the list." });
+            return Results.BadRequest(new ErrorMessage("The number of item IDs does not match the number of items in the list."));
         }
 
         if (request.ItemIds.Distinct().Count() != request.ItemIds.Count)
         {
-            return Results.BadRequest(new { message = "Duplicate item IDs provided." });
+            return Results.BadRequest(new ErrorMessage("Duplicate item IDs provided."));
         }
 
         var itemDict = giftList.Items.ToDictionary(i => i.Id);
@@ -253,7 +254,7 @@ public static class UserListsEndpoints
         {
             if (!itemDict.ContainsKey(itemId))
             {
-                return Results.BadRequest(new { message = $"Item with ID {itemId} does not belong to this gift list." });
+                return Results.BadRequest(new ErrorMessage($"Item with ID {itemId} does not belong to this gift list."));
             }
         }
 

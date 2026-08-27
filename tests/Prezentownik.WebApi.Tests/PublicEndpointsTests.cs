@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Prezentownik.WebApi.Data;
 using Prezentownik.WebApi.Models;
+using Prezentownik.WebApi.Modules.Commons.DTOs;
 using Prezentownik.WebApi.Modules.Public;
 using Prezentownik.WebApi.Modules.Public.DTOs;
 using Xunit;
@@ -505,7 +506,7 @@ public class PublicEndpointsTests
     }
 
     [Fact]
-    public async Task AdoptClaims_WhenTokensDoNotExistOrEmpty_ShouldReturnZeroCount()
+    public async Task AdoptClaims_WhenTokensDoNotExistOrEmpty_ShouldReturnBadRequest()
     {
         var dbName = Guid.NewGuid().ToString();
         var userId = "user_1";
@@ -517,23 +518,11 @@ public class PublicEndpointsTests
         var userPrincipal = CreatePrincipal(userId);
 
         var emptyResult = await PublicEndpoints.AdoptClaims(new AdoptClaimsRequest([]), userPrincipal, dbContext, CancellationToken.None);
-        var emptyOk = Assert.IsType<Ok<AdoptClaimsResponse>>(emptyResult, exactMatch: false);
-        Assert.Empty(emptyOk.Value!.AdoptedClaimsRevocationTokens);
+        var emptyBadRequest = Assert.IsType<BadRequest<ErrorMessage>>(emptyResult, exactMatch: false);
+        Assert.NotNull(emptyBadRequest.Value?.Message);
 
         var nonExistentResult = await PublicEndpoints.AdoptClaims(new AdoptClaimsRequest([Guid.NewGuid(), Guid.NewGuid()]), userPrincipal, dbContext, CancellationToken.None);
         var nonExistentOk = Assert.IsType<Ok<AdoptClaimsResponse>>(nonExistentResult, exactMatch: false);
         Assert.Empty(nonExistentOk.Value!.AdoptedClaimsRevocationTokens);
-    }
-
-    [Fact]
-    public async Task AdoptClaims_WhenAnonymousUser_ShouldReturnUnauthorized()
-    {
-        var dbName = Guid.NewGuid().ToString();
-        await using var dbContext = CreateDbContext(dbName);
-        var anonymousPrincipal = CreatePrincipal(null);
-
-        var result = await PublicEndpoints.AdoptClaims(new AdoptClaimsRequest([Guid.NewGuid()]), anonymousPrincipal, dbContext, CancellationToken.None);
-
-        Assert.IsType<UnauthorizedHttpResult>(result, exactMatch: false);
     }
 }

@@ -1,10 +1,10 @@
-using System.Diagnostics;
 using System.Net.Mime;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Prezentownik.WebApi.Data;
 using Prezentownik.WebApi.Extensions;
+using Prezentownik.WebApi.Modules.Commons.DTOs;
 using Prezentownik.WebApi.Modules.Public.DTOs;
 using Serilog;
 
@@ -103,7 +103,7 @@ public static class PublicEndpoints
         }
         catch (InvalidOperationException ex)
         {
-            return Results.BadRequest(new { message = ex.Message });
+            return Results.BadRequest(new ErrorMessage(ex.Message));
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -142,7 +142,7 @@ public static class PublicEndpoints
 
         if (revocationToken is null && userId is null)
         {
-            return Results.BadRequest(new { message = "Revocation token is required." });
+            return Results.BadRequest(new ErrorMessage("Revocation token is required."));
         }
 
         try
@@ -158,7 +158,7 @@ public static class PublicEndpoints
         }
         catch (InvalidOperationException ex)
         {
-            return Results.BadRequest(new { message = ex.Message });
+            return Results.BadRequest(new ErrorMessage(ex.Message));
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -173,7 +173,7 @@ public static class PublicEndpoints
 
         if (request.RevocationTokens is not { Count: > 0 })
         {
-            return Results.BadRequest(new { message = "No revocation tokens provided" });
+            return Results.BadRequest(new ErrorMessage("No revocation tokens provided"));
         }
 
         var distinctTokens = request.RevocationTokens.Distinct().ToList();
