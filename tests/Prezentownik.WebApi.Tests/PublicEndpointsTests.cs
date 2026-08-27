@@ -114,7 +114,7 @@ public class PublicEndpointsTests
     }
 
     [Fact]
-    public async Task ClaimGift_WhenValid_ShouldAddClaimAndReturnRevocationToken()
+    public async Task ClaimGift_WhenAnonymousVisitor_ShouldAddClaimAndReturnRevocationToken()
     {
         var dbName = Guid.NewGuid().ToString();
         var ownerId = "owner_1";
@@ -128,18 +128,52 @@ public class PublicEndpointsTests
         await dbContext.SaveChangesAsync();
 
         var request = new CreateClaimRequest(1, "Uncle Bob");
-        var strangerPrincipal = CreatePrincipal("someone_else");
+        var anonymousPrincipal = CreatePrincipal(null);
 
-        var result = await PublicEndpoints.ClaimGift(giftList.Id, item.Id, request, strangerPrincipal, dbContext, CancellationToken.None);
+        var result = await PublicEndpoints.ClaimGift(giftList.Id, item.Id, request, anonymousPrincipal, dbContext, CancellationToken.None);
 
         var okResult = Assert.IsType<Ok<CreateClaimResponse>>(result, exactMatch: false);
-        Assert.NotEqual(Guid.Empty, okResult.Value!.RevocationToken);
+        var token = Assert.NotNull(okResult.Value!.RevocationToken);
+        Assert.NotEqual(Guid.Empty, token);
 
         await using var verifyContext = CreateDbContext(dbName);
         var savedItem = await verifyContext.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);
         Assert.Single(savedItem.Claims);
         Assert.Equal("Uncle Bob", savedItem.Claims[0].ClaimantName);
-        Assert.Equal("someone_else", savedItem.Claims[0].ClaimantId);
+        Assert.Null(savedItem.Claims[0].ClaimantId);
+        Assert.Equal(token, savedItem.Claims[0].RevocationToken);
+    }
+
+    [Fact]
+    public async Task ClaimGift_WhenAuthenticatedUser_ShouldAddClaimWithoutRevocationToken()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var ownerId = "owner_1";
+        var userId = "someone_else";
+
+        await using var dbContext = CreateDbContext(dbName);
+        dbContext.Users.Add(CreateOwnerUser(ownerId));
+        dbContext.Users.Add(new AppUser { Id = userId, UserName = userId });
+        var giftList = GiftList.CreateNew("Birthday Wishlist", null, ownerId);
+        var item = Item.CreateFromRequest("Headphones", null, 1, Models.Enums.ItemType.Limited, 2);
+        giftList.Items.Add(item);
+        dbContext.GiftLists.Add(giftList);
+        await dbContext.SaveChangesAsync();
+
+        var request = new CreateClaimRequest(1, "Uncle Bob");
+        var userPrincipal = CreatePrincipal(userId);
+
+        var result = await PublicEndpoints.ClaimGift(giftList.Id, item.Id, request, userPrincipal, dbContext, CancellationToken.None);
+
+        var okResult = Assert.IsType<Ok<CreateClaimResponse>>(result, exactMatch: false);
+        Assert.Null(okResult.Value!.RevocationToken);
+
+        await using var verifyContext = CreateDbContext(dbName);
+        var savedItem = await verifyContext.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);
+        Assert.Single(savedItem.Claims);
+        Assert.Equal("Uncle Bob", savedItem.Claims[0].ClaimantName);
+        Assert.Equal(userId, savedItem.Claims[0].ClaimantId);
+        Assert.Null(savedItem.Claims[0].RevocationToken);
     }
 
     [Fact]
@@ -392,7 +426,51 @@ public class PublicEndpointsTests
         await using var verifyContext = CreateDbContext(dbName);
         var claims = await verifyContext.GiftClaims.ToListAsync();
         Assert.Equal(3, claims.Count);
-        Assert.All(claims, c => Assert.Equal(userId, c.ClaimantId));
+        Assert.All(claims, c =>
+        {
+            Assert.Equal(userId, c.ClaimantId);
+            Assert.Null(c.RevocationToken);
+        });
+    }
+
+    [Fact]
+    public async Task AdoptClaims_AfterAdoption_UserCanUnclaimByIdentityAlone_AndOldTokenIsInvalid()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var ownerId = "owner_1";
+        var userId = "new_user";
+
+        await using var dbContext = CreateDbContext(dbName);
+        dbContext.Users.Add(CreateOwnerUser(ownerId));
+        dbContext.Users.Add(new AppUser { Id = userId, UserName = userId });
+
+        var list = GiftList.CreateNew("List", null, ownerId);
+        var item = Item.CreateFromRequest("Item 1", null, 1, Models.Enums.ItemType.Singular, 1);
+        item.AddClaim(1, "Anonymous", null);
+        list.Items.Add(item);
+        dbContext.GiftLists.Add(list);
+        await dbContext.SaveChangesAsync();
+
+        var originalToken = Assert.NotNull(item.Claims[0].RevocationToken);
+
+        // Adopt the claim
+        var userPrincipal = CreatePrincipal(userId);
+        var adoptResult = await PublicEndpoints.AdoptClaims(new AdoptClaimsRequest([originalToken]), userPrincipal, dbContext, CancellationToken.None);
+        var adoptOk = Assert.IsType<Ok<AdoptClaimsResponse>>(adoptResult, exactMatch: false);
+        Assert.Single(adoptOk.Value!.AdoptedClaimsRevocationTokens);
+
+        // Trying to unclaim with the old revocation token should now fail (token was cleared)
+        var unclaimWithTokenResult = await PublicEndpoints.UnclaimGift(list.Id, item.Id, originalToken, userPrincipal, dbContext, CancellationToken.None);
+        var statusResult = Assert.IsAssignableFrom<IStatusCodeHttpResult>(unclaimWithTokenResult);
+        Assert.Equal(StatusCodes.Status400BadRequest, statusResult.StatusCode);
+
+        // Unclaiming by identity alone (without token) should succeed
+        var unclaimByIdentityResult = await PublicEndpoints.UnclaimGift(list.Id, item.Id, null, userPrincipal, dbContext, CancellationToken.None);
+        Assert.IsType<NoContent>(unclaimByIdentityResult, exactMatch: false);
+
+        await using var verifyContext = CreateDbContext(dbName);
+        var savedItem = await verifyContext.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);
+        Assert.Empty(savedItem.Claims);
     }
 
     [Fact]

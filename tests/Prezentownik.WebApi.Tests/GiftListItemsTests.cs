@@ -162,6 +162,80 @@ public class GiftListItemsTests
     }
 
     [Fact]
+    public async Task ClaimingItemForAuthenticatedUser_ShouldNotSetRevocationToken()
+    {
+        var dbName = Guid.NewGuid().ToString();
+
+        // Arrange
+        using var dbContext = CreateDbContext(dbName);
+        var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
+        var item = Item.CreateFromRequest("Board Games", null, 1, ItemType.Limited, 3);
+        giftList.Items.Add(item);
+        dbContext.GiftLists.Add(giftList);
+        await dbContext.SaveChangesAsync();
+
+        // Act
+        using var context2 = CreateDbContext(dbName);
+        var trackedList = await context2.GiftLists
+            .Include(g => g.Items)
+            .ThenInclude(i => i.Claims)
+            .FirstAsync(g => g.Id == giftList.Id);
+
+        var trackedItem = trackedList.Items.First();
+        var claim = trackedItem.AddClaim(2, "Alice", "user456");
+
+        await context2.SaveChangesAsync();
+
+        // Assert
+        Assert.Null(claim.RevocationToken);
+        Assert.Equal("user456", claim.ClaimantId);
+
+        using var context3 = CreateDbContext(dbName);
+        var reloadedItem = await context3.Items.Include(i => i.Claims).FirstAsync(i => i.Id == trackedItem.Id);
+        Assert.Single(reloadedItem.Claims);
+        Assert.Null(reloadedItem.Claims.First().RevocationToken);
+        Assert.Equal("user456", reloadedItem.Claims.First().ClaimantId);
+    }
+
+    [Fact]
+    public async Task AssigningClaimToUser_ShouldSetClaimantIdAndNullifyRevocationToken()
+    {
+        var dbName = Guid.NewGuid().ToString();
+
+        // Arrange
+        using var dbContext = CreateDbContext(dbName);
+        var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
+        var item = Item.CreateFromRequest("Board Games", null, 1, ItemType.Limited, 3);
+        giftList.Items.Add(item);
+        dbContext.GiftLists.Add(giftList);
+        await dbContext.SaveChangesAsync();
+
+        // Act
+        using var context2 = CreateDbContext(dbName);
+        var trackedList = await context2.GiftLists
+            .Include(g => g.Items)
+            .ThenInclude(i => i.Claims)
+            .FirstAsync(g => g.Id == giftList.Id);
+
+        var trackedItem = trackedList.Items.First();
+        var claim = trackedItem.AddClaim(1, "Anonymous", null);
+        Assert.NotNull(claim.RevocationToken);
+        await context2.SaveChangesAsync();
+
+        claim.AssignToUser("user789");
+        Assert.Null(claim.RevocationToken);
+        Assert.Equal("user789", claim.ClaimantId);
+        await context2.SaveChangesAsync();
+
+        // Assert
+        using var context3 = CreateDbContext(dbName);
+        var reloadedItem = await context3.Items.Include(i => i.Claims).FirstAsync(i => i.Id == trackedItem.Id);
+        Assert.Single(reloadedItem.Claims);
+        Assert.Null(reloadedItem.Claims.First().RevocationToken);
+        Assert.Equal("user789", reloadedItem.Claims.First().ClaimantId);
+    }
+
+    [Fact]
     public async Task RemovingClaim_ShouldRemoveFromItemAndDatabase()
     {
         var dbName = Guid.NewGuid().ToString();

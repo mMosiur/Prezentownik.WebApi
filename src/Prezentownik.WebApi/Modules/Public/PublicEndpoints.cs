@@ -170,9 +170,9 @@ public static class PublicEndpoints
         var userId = principal.GetUserId();
         if (userId is null) return Results.Unauthorized();
 
-        if (request.RevocationTokens is null || request.RevocationTokens.Count == 0)
+        if (request.RevocationTokens is not { Count: > 0 })
         {
-            return Results.Ok(new AdoptClaimsResponse([]));
+            return Results.BadRequest(new { message = "No revocation tokens provided" });
         }
 
         var distinctTokens = request.RevocationTokens.Distinct().ToList();
@@ -200,8 +200,9 @@ public static class PublicEndpoints
 
             if (claim.ClaimantId is null)
             {
+                var revocationToken = claim.RevocationToken!.Value;
                 claim.AssignToUser(userId);
-                adoptedClaims.Add(claim.RevocationToken!.Value);
+                adoptedClaims.Add(revocationToken);
             }
         }
 

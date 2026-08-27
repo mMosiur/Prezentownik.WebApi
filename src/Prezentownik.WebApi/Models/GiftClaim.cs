@@ -15,7 +15,7 @@ public class GiftClaim
 
     public string? ClaimantName { get; init; }
 
-    public Guid? RevocationToken { get; init; }
+    public Guid? RevocationToken { get; set; }
 
     public void AssignToUser(string userId)
     {
@@ -25,6 +25,7 @@ public class GiftClaim
         }
 
         ClaimantId = userId;
+        RevocationToken = null;
     }
 
     public static GiftClaim CreateNewForUnauthenticated(int quantityClaimed, string? claimantName)
