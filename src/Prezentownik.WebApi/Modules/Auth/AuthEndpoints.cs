@@ -32,14 +32,14 @@ public static class AuthEndpoints
             .WithDescription("Update user information");
     }
 
-    private static async Task<IResult> Logout(SignInManager<AppUser> signInManager)
+    internal static async Task<IResult> Logout(SignInManager<AppUser> signInManager)
     {
         await signInManager.SignOutAsync();
         Log.Information("User signed out");
         return Results.NoContent();
     }
 
-    private static async Task<IResult> GetUserInfo(ClaimsPrincipal user, UserManager<AppUser> userManager)
+    internal static async Task<IResult> GetUserInfo(ClaimsPrincipal user, UserManager<AppUser> userManager)
     {
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         Log.Information("Getting user info for user: {UserId}", userId);
@@ -54,7 +54,7 @@ public static class AuthEndpoints
         return Results.Ok(new UserInfoResponse(appUser.Email!, appUser.DisplayName));
     }
 
-    private static async Task<IResult> UpdateUserInfo(ClaimsPrincipal user, [FromBody] UpdateUserInfoRequest request, UserManager<AppUser> userManager)
+    internal static async Task<IResult> UpdateUserInfo(ClaimsPrincipal user, [FromBody] UpdateUserInfoRequest request, UserManager<AppUser> userManager)
     {
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier);
         Log.Information("Updating user info for user: {UserId} (New display name: {DisplayName})", userId, request.DisplayName);

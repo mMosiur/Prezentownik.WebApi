@@ -45,7 +45,6 @@ try
 
     builder.Services.AddOutputCache(options =>
     {
-        options.AddBasePolicy(policy => policy.Expire(TimeSpan.FromMinutes(10)));
         options.AddPolicy("OpenAPI", policy => policy.Expire(TimeSpan.FromDays(1)));
     });
 
