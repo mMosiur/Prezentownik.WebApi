@@ -46,6 +46,7 @@ try
     builder.Services.AddOutputCache(options =>
     {
         options.AddBasePolicy(policy => policy.Expire(TimeSpan.FromMinutes(10)));
+        options.AddPolicy("OpenAPI", policy => policy.Expire(TimeSpan.FromDays(1)));
     });
 
     builder.Services.AddOpenApi();
@@ -158,11 +159,8 @@ try
                          | ForwardedHeaders.XForwardedProto,
     });
 
-    if (app.Environment.IsDevelopment())
-    {
-        app.MapOpenApi("/openapi/{documentName}.yaml")
-            .CacheOutput();
-    }
+    app.MapOpenApi("/openapi/{documentName}.yaml")
+        .CacheOutput(policyName: "OpenAPI");
 
     app.MapHealthChecks("health");
 
@@ -182,6 +180,8 @@ try
 
     app.UseAuthentication();
     app.UseAuthorization();
+
+    app.UseOutputCache();
 
     app
         .MapModuleEndpoints<AuthModule>()
