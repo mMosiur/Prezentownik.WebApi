@@ -46,10 +46,17 @@ public sealed class IdentityEmailSender : IEmailSender<AppUser>
 
     public async Task SendPasswordResetCodeAsync(AppUser user, string email, string resetCode)
     {
-        var emailBody = await _templateService.RenderEmailPasswordResetCodeAsync(resetCode);
+        var link = QueryHelpers.AddQueryString(
+            $"{_frontendBaseUrl.AsSpan().TrimEnd('/')}/reset-password",
+            new Dictionary<string, string?>
+            {
+                ["email"] = email,
+                ["code"] = resetCode
+            });
+        var emailBody = await _templateService.RenderEmailPasswordResetLinkAsync(link);
         await _emailService.SendAsync(
             recipient: email,
-            subject: "Kod do zresetowania hasła",
+            subject: "Zresetuj swoje hasło",
             htmlBody: emailBody.Html,
             plainTextBody: emailBody.PlainText,
             CancellationToken.None);
