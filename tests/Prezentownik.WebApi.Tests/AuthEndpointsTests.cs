@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Time.Testing;
 using Prezentownik.WebApi.Data;
 using Prezentownik.WebApi.Models;
 using Prezentownik.WebApi.Modules.Auth;
@@ -13,13 +14,15 @@ namespace Prezentownik.WebApi.Tests;
 
 public class AuthEndpointsTests
 {
-    private static AppDbContext CreateDbContext(string dbName)
+    private readonly FakeTimeProvider _fakeTimeProvider = TestHelpers.CreateFakeTimeProvider();
+
+    private AppDbContext CreateDbContext(string dbName)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: dbName)
             .Options;
 
-        return new AppDbContext(options);
+        return new AppDbContext(options, _fakeTimeProvider);
     }
 
     private static UserManager<AppUser> CreateUserManager(AppDbContext dbContext)

@@ -4,9 +4,12 @@ using Prezentownik.WebApi.Models;
 
 namespace Prezentownik.WebApi.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options)
+public class AppDbContext(DbContextOptions<AppDbContext> options,
+     TimeProvider timeProvider)
     : IdentityDbContext<AppUser>(options)
 {
+    private readonly TimeProvider _timeProvider = timeProvider;
+
     public DbSet<GiftList> GiftLists => Set<GiftList>();
     public DbSet<Item> Items => Set<Item>();
     public DbSet<GiftClaim> GiftClaims => Set<GiftClaim>();
@@ -51,7 +54,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
             giftList.Property(gl => gl.UpdatedAt)
                 .HasDefaultValueSql("CURRENT_TIMESTAMP")
-                .ValueGeneratedOnAddOrUpdate();
+                .ValueGeneratedOnAdd();
 
             giftList.HasMany(gl => gl.Items)
                 .WithOne(i => i.GiftList)
@@ -113,5 +116,34 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
 
             claims.Property(c => c.RevocationToken);
         });
+    }
+
+    public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
+    {
+        UpdateAuditDateTimes();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        UpdateAuditDateTimes();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    private void UpdateAuditDateTimes()
+    {
+        var utcNow = _timeProvider.GetUtcNow();
+        foreach (var entry in ChangeTracker.Entries<IHasAuditDateTimes>())
+        {
+            if (entry.State == EntityState.Added)
+            {
+                entry.Entity.CreatedAt = utcNow;
+                entry.Entity.UpdatedAt = utcNow;
+            }
+            else if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.UpdatedAt = utcNow;
+            }
+        }
     }
 }

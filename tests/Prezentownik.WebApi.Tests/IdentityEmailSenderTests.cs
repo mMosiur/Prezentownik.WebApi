@@ -29,7 +29,6 @@ public class IdentityEmailSenderTests
     {
         public string? RenderedConfirmationLink { get; private set; }
         public string? RenderedPasswordResetLink { get; private set; }
-        public string? RenderedPasswordResetCode { get; private set; }
 
         public Task<EmailBody> RenderEmailConfirmationAsync(string confirmationLink)
         {
@@ -41,12 +40,6 @@ public class IdentityEmailSenderTests
         {
             RenderedPasswordResetLink = resetLink;
             return Task.FromResult(new EmailBody($"<html>{resetLink}</html>", resetLink));
-        }
-
-        public Task<EmailBody> RenderEmailPasswordResetCodeAsync(string resetCode)
-        {
-            RenderedPasswordResetCode = resetCode;
-            return Task.FromResult(new EmailBody($"<html>{resetCode}</html>", resetCode));
         }
     }
 
@@ -75,6 +68,8 @@ public class IdentityEmailSenderTests
 
         Assert.Equal("user@example.com", fakeEmailService.LastRecipient);
         Assert.Equal("Potwierdź swój adres e-mail", fakeEmailService.LastSubject);
+        Assert.NotNull(fakeEmailService.LastHtmlBody);
+        Assert.NotNull(fakeEmailService.LastPlainTextBody);
         Assert.NotNull(fakeTemplateService.RenderedConfirmationLink);
         Assert.StartsWith("https://prezentownik.info.pl/confirm-email", fakeTemplateService.RenderedConfirmationLink);
         Assert.Contains("userId=user123", fakeTemplateService.RenderedConfirmationLink);
@@ -96,6 +91,8 @@ public class IdentityEmailSenderTests
 
         Assert.Equal("user@example.com", fakeEmailService.LastRecipient);
         Assert.Equal("Zresetuj swoje hasło", fakeEmailService.LastSubject);
+        Assert.NotNull(fakeEmailService.LastHtmlBody);
+        Assert.NotNull(fakeEmailService.LastPlainTextBody);
         Assert.NotNull(fakeTemplateService.RenderedPasswordResetLink);
         Assert.Equal("https://prezentownik.info.pl/reset-password?email=user@example.com&code=encodedResetCode123", fakeTemplateService.RenderedPasswordResetLink);
     }
@@ -115,6 +112,8 @@ public class IdentityEmailSenderTests
 
         Assert.Equal("user@example.com", fakeEmailService.LastRecipient);
         Assert.Equal("Zresetuj swoje hasło", fakeEmailService.LastSubject);
+        Assert.NotNull(fakeEmailService.LastHtmlBody);
+        Assert.NotNull(fakeEmailService.LastPlainTextBody);
         Assert.NotNull(fakeTemplateService.RenderedPasswordResetLink);
         Assert.StartsWith("https://prezentownik.info.pl/reset-password", fakeTemplateService.RenderedPasswordResetLink);
         Assert.Contains("email=user@example.com", fakeTemplateService.RenderedPasswordResetLink);

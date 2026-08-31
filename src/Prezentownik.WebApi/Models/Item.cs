@@ -1,5 +1,4 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Security.AccessControl;
 using Prezentownik.WebApi.Models.Enums;
 
 namespace Prezentownik.WebApi.Models;

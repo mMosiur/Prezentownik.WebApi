@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Components;
-using Prezentownik.WebApi.Modules.Auth.Email;
 using Prezentownik.WebApi.Services.Html;
 
 namespace Prezentownik.WebApi.Services.Email;

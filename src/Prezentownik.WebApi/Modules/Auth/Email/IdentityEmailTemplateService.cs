@@ -48,21 +48,4 @@ public sealed class IdentityEmailTemplateService(IRazorHtmlRenderer renderer)
 
         return new(html, plainText);
     }
-
-    public async Task<EmailBody> RenderEmailPasswordResetCodeAsync(string resetCode)
-    {
-        var html = await _renderer.RenderAsync<PasswordResetCodeTemplate>(new()
-        {
-            [nameof(PasswordResetCodeTemplate.ResetCode)] = resetCode
-        });
-
-        var plainText =
-            $"""
-             Twój kod do zresetowania hasła w serwisie Prezentownik to: {resetCode}
-
-             Jeśli nie prosiłeś o reset hasła, zignoruj tę wiadomość.
-             """;
-
-        return new(html, plainText);
-    }
 }

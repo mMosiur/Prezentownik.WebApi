@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Time.Testing;
 using Prezentownik.WebApi.Data;
 using Prezentownik.WebApi.Models;
 using Prezentownik.WebApi.Models.Enums;
@@ -8,13 +9,15 @@ namespace Prezentownik.WebApi.Tests;
 
 public class GiftListItemsTests
 {
-    private static AppDbContext CreateDbContext(string dbName)
+    private readonly FakeTimeProvider _fakeTimeProvider = TestHelpers.CreateFakeTimeProvider();
+
+    private AppDbContext CreateDbContext(string dbName)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: dbName)
             .Options;
 
-        return new AppDbContext(options);
+        return new AppDbContext(options, _fakeTimeProvider);
     }
 
     [Fact]
@@ -41,13 +44,13 @@ public class GiftListItemsTests
         var dbName = Guid.NewGuid().ToString();
 
         // Arrange
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
 
         // Simulate fetching list from DB in another context or tracking it as Unchanged
-        using var context2 = CreateDbContext(dbName);
+        await using var context2 = CreateDbContext(dbName);
         var trackedList = await context2.GiftLists.Include(g => g.Items).FirstAsync(g => g.Id == giftList.Id);
 
         // Act
@@ -64,7 +67,7 @@ public class GiftListItemsTests
         Assert.NotEqual(Guid.Empty, item.Id);
         Assert.Equal(giftList.Id, item.GiftListId);
 
-        using var context3 = CreateDbContext(dbName);
+        await using var context3 = CreateDbContext(dbName);
         var savedList = await context3.GiftLists.Include(g => g.Items).FirstAsync(g => g.Id == giftList.Id);
         Assert.Single(savedList.Items);
         Assert.Equal("Wireless Headphones", savedList.Items.First().Name);
@@ -76,19 +79,19 @@ public class GiftListItemsTests
     {
         var dbName = Guid.NewGuid().ToString();
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
         var item = Item.CreateFromRequest("Original Name", "Original Desc", 1, ItemType.Singular, 1);
         giftList.Items.Add(item);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
 
-        using var context2 = CreateDbContext(dbName);
+        await using var context2 = CreateDbContext(dbName);
         var itemToEdit = await context2.Items.FirstAsync(i => i.Id == item.Id);
         itemToEdit.UpdateFromRequest("Updated Name", "Updated Desc", ItemType.Limited, 5);
         await context2.SaveChangesAsync();
 
-        using var context3 = CreateDbContext(dbName);
+        await using var context3 = CreateDbContext(dbName);
         var reloaded = await context3.Items.FirstAsync(i => i.Id == item.Id);
         Assert.Equal("Updated Name", reloaded.Name);
         Assert.Equal("Updated Desc", reloaded.Description);
@@ -102,19 +105,19 @@ public class GiftListItemsTests
     {
         var dbName = Guid.NewGuid().ToString();
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
         var item = Item.CreateFromRequest("To Delete", null, 1, ItemType.Singular, 1);
         giftList.Items.Add(item);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
 
-        using var context2 = CreateDbContext(dbName);
+        await using var context2 = CreateDbContext(dbName);
         var itemToDelete = await context2.Items.FirstAsync(i => i.Id == item.Id);
         context2.Items.Remove(itemToDelete);
         await context2.SaveChangesAsync();
 
-        using var context3 = CreateDbContext(dbName);
+        await using var context3 = CreateDbContext(dbName);
         var remaining = await context3.Items.FirstOrDefaultAsync(i => i.Id == item.Id);
         Assert.Null(remaining);
     }
@@ -125,7 +128,7 @@ public class GiftListItemsTests
         var dbName = Guid.NewGuid().ToString();
 
         // Arrange
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
         var item = Item.CreateFromRequest("Board Games", null, 1, ItemType.Limited, 3);
         giftList.Items.Add(item);
@@ -133,7 +136,7 @@ public class GiftListItemsTests
         await dbContext.SaveChangesAsync();
 
         // Act: Claim item on tracked entity
-        using var context2 = CreateDbContext(dbName);
+        await using var context2 = CreateDbContext(dbName);
         var trackedList = await context2.GiftLists
             .Include(g => g.Items)
             .ThenInclude(i => i.Claims)
@@ -153,7 +156,7 @@ public class GiftListItemsTests
         Assert.NotEqual(Guid.Empty, claim.Id);
         Assert.NotEqual(Guid.Empty, claim.RevocationToken);
 
-        using var context3 = CreateDbContext(dbName);
+        await using var context3 = CreateDbContext(dbName);
         var reloadedItem = await context3.Items.Include(i => i.Claims).FirstAsync(i => i.Id == trackedItem.Id);
         Assert.Single(reloadedItem.Claims);
         Assert.Equal(2, reloadedItem.Claims.First().QuantityClaimed);
@@ -167,7 +170,7 @@ public class GiftListItemsTests
         var dbName = Guid.NewGuid().ToString();
 
         // Arrange
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
         var item = Item.CreateFromRequest("Board Games", null, 1, ItemType.Limited, 3);
         giftList.Items.Add(item);
@@ -175,7 +178,7 @@ public class GiftListItemsTests
         await dbContext.SaveChangesAsync();
 
         // Act
-        using var context2 = CreateDbContext(dbName);
+        await using var context2 = CreateDbContext(dbName);
         var trackedList = await context2.GiftLists
             .Include(g => g.Items)
             .ThenInclude(i => i.Claims)
@@ -190,7 +193,7 @@ public class GiftListItemsTests
         Assert.Null(claim.RevocationToken);
         Assert.Equal("user456", claim.ClaimantId);
 
-        using var context3 = CreateDbContext(dbName);
+        await using var context3 = CreateDbContext(dbName);
         var reloadedItem = await context3.Items.Include(i => i.Claims).FirstAsync(i => i.Id == trackedItem.Id);
         Assert.Single(reloadedItem.Claims);
         Assert.Null(reloadedItem.Claims.First().RevocationToken);
@@ -203,7 +206,7 @@ public class GiftListItemsTests
         var dbName = Guid.NewGuid().ToString();
 
         // Arrange
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
         var item = Item.CreateFromRequest("Board Games", null, 1, ItemType.Limited, 3);
         giftList.Items.Add(item);
@@ -211,7 +214,7 @@ public class GiftListItemsTests
         await dbContext.SaveChangesAsync();
 
         // Act
-        using var context2 = CreateDbContext(dbName);
+        await using var context2 = CreateDbContext(dbName);
         var trackedList = await context2.GiftLists
             .Include(g => g.Items)
             .ThenInclude(i => i.Claims)
@@ -228,7 +231,7 @@ public class GiftListItemsTests
         await context2.SaveChangesAsync();
 
         // Assert
-        using var context3 = CreateDbContext(dbName);
+        await using var context3 = CreateDbContext(dbName);
         var reloadedItem = await context3.Items.Include(i => i.Claims).FirstAsync(i => i.Id == trackedItem.Id);
         Assert.Single(reloadedItem.Claims);
         Assert.Null(reloadedItem.Claims.First().RevocationToken);
@@ -240,7 +243,7 @@ public class GiftListItemsTests
     {
         var dbName = Guid.NewGuid().ToString();
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
         var item = Item.CreateFromRequest("Board Games", null, 1, ItemType.Limited, 3);
         item.AddClaim(1, "Bob", null);
@@ -251,12 +254,12 @@ public class GiftListItemsTests
         var claim = item.Claims.First();
         var revocationToken = Assert.NotNull(claim.RevocationToken);
 
-        using var context2 = CreateDbContext(dbName);
+        await using var context2 = CreateDbContext(dbName);
         var trackedItem = await context2.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);
         trackedItem.RemoveClaim(revocationToken);
         await context2.SaveChangesAsync();
 
-        using var context3 = CreateDbContext(dbName);
+        await using var context3 = CreateDbContext(dbName);
         var reloaded = await context3.Items.Include(i => i.Claims).FirstAsync(i => i.Id == item.Id);
         Assert.Empty(reloaded.Claims);
     }
@@ -266,7 +269,7 @@ public class GiftListItemsTests
     {
         var dbName = Guid.NewGuid().ToString();
 
-        using var dbContext = CreateDbContext(dbName);
+        await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Birthday 2026", "My wishlist", "user123");
         var item1 = Item.CreateFromRequest("Item 1", null, 1, ItemType.Singular, 1);
         var item2 = Item.CreateFromRequest("Item 2", null, 2, ItemType.Singular, 1);
@@ -278,7 +281,7 @@ public class GiftListItemsTests
         await dbContext.SaveChangesAsync();
 
         // Act: reorder [item3, item1, item2]
-        using var context2 = CreateDbContext(dbName);
+        await using var context2 = CreateDbContext(dbName);
         var listToReorder = await context2.GiftLists.Include(g => g.Items).FirstAsync(g => g.Id == giftList.Id);
         var itemDict = listToReorder.Items.ToDictionary(i => i.Id);
 
@@ -290,7 +293,7 @@ public class GiftListItemsTests
         await context2.SaveChangesAsync();
 
         // Assert
-        using var context3 = CreateDbContext(dbName);
+        await using var context3 = CreateDbContext(dbName);
         var reloaded = await context3.GiftLists.Include(g => g.Items).FirstAsync(g => g.Id == giftList.Id);
         var reloadedItem1 = reloaded.Items.First(i => i.Id == item1.Id);
         var reloadedItem2 = reloaded.Items.First(i => i.Id == item2.Id);
@@ -300,12 +303,12 @@ public class GiftListItemsTests
         Assert.Equal(3, reloadedItem2.OrderNumber);
         Assert.Equal(1, reloadedItem3.OrderNumber);
 
-        var userListDetails = Prezentownik.WebApi.Modules.UserLists.UserListsMapper.MapToListDetailsDto(reloaded);
+        var userListDetails = Modules.UserLists.UserListsMapper.MapToListDetailsDto(reloaded);
         Assert.Equal(item3.Id, userListDetails.Items[0].Id);
         Assert.Equal(item1.Id, userListDetails.Items[1].Id);
         Assert.Equal(item2.Id, userListDetails.Items[2].Id);
 
-        var publicListDto = Prezentownik.WebApi.Modules.Public.PublicMapper.MapToPublicListDto(reloaded, null);
+        var publicListDto = Modules.Public.PublicMapper.MapToPublicListDto(reloaded, null);
         Assert.Equal(item3.Id, publicListDto.Items[0].Id);
         Assert.Equal(item1.Id, publicListDto.Items[1].Id);
         Assert.Equal(item2.Id, publicListDto.Items[2].Id);

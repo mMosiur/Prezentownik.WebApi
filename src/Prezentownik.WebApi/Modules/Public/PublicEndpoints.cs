@@ -19,12 +19,12 @@ public static class PublicEndpoints
             .ProducesValidationProblem();
 
         group.MapGet("/{listId:guid}", GetList)
-            .Produces<PublicListDto>(StatusCodes.Status200OK)
+            .Produces<PublicListDto>()
             .WithDescription("View list & items");
 
         group.MapPost("/{listId:guid}/items/{itemId:guid}/claims", ClaimGift)
             .Accepts<CreateClaimRequest>(MediaTypeNames.Application.Json)
-            .Produces<CreateClaimResponse>(StatusCodes.Status200OK)
+            .Produces<CreateClaimResponse>()
             .Produces(StatusCodes.Status400BadRequest)
             .Produces(StatusCodes.Status403Forbidden)
             .RequireRateLimiting("public-claims")
@@ -40,7 +40,7 @@ public static class PublicEndpoints
         group.MapPost("/claims/adopt", AdoptClaims)
             .RequireAuthorization() // Adopting claims requires authentication
             .Accepts<AdoptClaimsRequest>(MediaTypeNames.Application.Json)
-            .Produces<AdoptClaimsResponse>(StatusCodes.Status200OK)
+            .Produces<AdoptClaimsResponse>()
             .ProducesProblem(StatusCodes.Status401Unauthorized)
             .RequireAuthorization()
             .WithDescription("Adopt unauthenticated claims by revocation tokens for the current user");

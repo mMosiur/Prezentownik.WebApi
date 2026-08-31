@@ -2,9 +2,9 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Time.Testing;
 using Prezentownik.WebApi.Data;
 using Prezentownik.WebApi.Models;
-using Prezentownik.WebApi.Models.Enums;
 using Prezentownik.WebApi.Modules.UserLists;
 using Prezentownik.WebApi.Modules.UserLists.DTOs;
 using Xunit;
@@ -13,13 +13,15 @@ namespace Prezentownik.WebApi.Tests;
 
 public class UserListsEndpointsTests
 {
-    private static AppDbContext CreateDbContext(string dbName)
+    private readonly FakeTimeProvider _fakeTimeProvider = TestHelpers.CreateFakeTimeProvider();
+
+    private AppDbContext CreateDbContext(string dbName)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: dbName)
             .Options;
 
-        return new AppDbContext(options);
+        return new AppDbContext(options, _fakeTimeProvider);
     }
 
     private static ClaimsPrincipal CreatePrincipal(string userId)
@@ -45,13 +47,13 @@ public class UserListsEndpointsTests
         await dbContext.SaveChangesAsync();
 
         // Add 1st item
-        var item1Req = new UpsertItemRequest("First Item", "Desc 1", Modules.UserLists.DTOs.ItemType.Singular, 1);
+        var item1Req = new UpsertItemRequest("First Item", "Desc 1", ItemType.Singular, 1);
         var result1 = await UserListsEndpoints.AddListItem(giftList.Id, item1Req, principal, dbContext, CancellationToken.None);
         var okResult1 = Assert.IsType<IValueHttpResult<ItemDto>>(result1, exactMatch: false);
         Assert.Equal(1, okResult1.Value!.OrderNumber);
 
         // Add 2nd item
-        var item2Req = new UpsertItemRequest("Second Item", "Desc 2", Modules.UserLists.DTOs.ItemType.Limited, 3);
+        var item2Req = new UpsertItemRequest("Second Item", "Desc 2", ItemType.Limited, 3);
         var result2 = await UserListsEndpoints.AddListItem(giftList.Id, item2Req, principal, dbContext, CancellationToken.None);
         var okResult2 = Assert.IsType<IValueHttpResult<ItemDto>>(result2, exactMatch: false);
         Assert.Equal(2, okResult2.Value!.OrderNumber);
@@ -66,12 +68,12 @@ public class UserListsEndpointsTests
 
         await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
-        var item = Item.CreateFromRequest("Old Name", "Old Desc", 5, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
+        var item = Item.CreateFromRequest("Old Name", "Old Desc", 5, Models.Enums.ItemType.Singular, 1);
         giftList.Items.Add(item);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
 
-        var updateReq = new UpsertItemRequest("New Name", "New Desc", Modules.UserLists.DTOs.ItemType.Limited, 10);
+        var updateReq = new UpsertItemRequest("New Name", "New Desc", ItemType.Limited, 10);
         var result = await UserListsEndpoints.EditListItem(giftList.Id, item.Id, updateReq, principal, dbContext, CancellationToken.None);
         var okResult = Assert.IsType<IValueHttpResult<ItemDto>>(result, exactMatch: false);
 
@@ -90,9 +92,9 @@ public class UserListsEndpointsTests
 
         await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
-        var itemA = Item.CreateFromRequest("Item A", null, 1, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
-        var itemB = Item.CreateFromRequest("Item B", null, 2, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
-        var itemC = Item.CreateFromRequest("Item C", null, 3, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
+        var itemA = Item.CreateFromRequest("Item A", null, 1, Models.Enums.ItemType.Singular, 1);
+        var itemB = Item.CreateFromRequest("Item B", null, 2, Models.Enums.ItemType.Singular, 1);
+        var itemC = Item.CreateFromRequest("Item C", null, 3, Models.Enums.ItemType.Singular, 1);
         giftList.Items.Add(itemA);
         giftList.Items.Add(itemB);
         giftList.Items.Add(itemC);
@@ -137,7 +139,7 @@ public class UserListsEndpointsTests
 
         await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
-        var itemA = Item.CreateFromRequest("Item A", null, 1, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
+        var itemA = Item.CreateFromRequest("Item A", null, 1, Models.Enums.ItemType.Singular, 1);
         giftList.Items.Add(itemA);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
@@ -159,8 +161,8 @@ public class UserListsEndpointsTests
 
         await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
-        var itemA = Item.CreateFromRequest("Item A", null, 1, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
-        var itemB = Item.CreateFromRequest("Item B", null, 2, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
+        var itemA = Item.CreateFromRequest("Item A", null, 1, Models.Enums.ItemType.Singular, 1);
+        var itemB = Item.CreateFromRequest("Item B", null, 2, Models.Enums.ItemType.Singular, 1);
         giftList.Items.Add(itemA);
         giftList.Items.Add(itemB);
         dbContext.GiftLists.Add(giftList);
@@ -182,7 +184,7 @@ public class UserListsEndpointsTests
 
         await using var dbContext = CreateDbContext(dbName);
         var giftList = GiftList.CreateNew("Wishlist", null, userId);
-        var itemA = Item.CreateFromRequest("Item A", null, 1, Prezentownik.WebApi.Models.Enums.ItemType.Singular, 1);
+        var itemA = Item.CreateFromRequest("Item A", null, 1, Models.Enums.ItemType.Singular, 1);
         giftList.Items.Add(itemA);
         dbContext.GiftLists.Add(giftList);
         await dbContext.SaveChangesAsync();
@@ -192,5 +194,64 @@ public class UserListsEndpointsTests
 
         var statusResult = (IStatusCodeHttpResult)result;
         Assert.Equal(StatusCodes.Status400BadRequest, statusResult.StatusCode);
+    }
+
+    [Fact]
+    public async Task CreateNewList_ShouldSetCreatedAtAndUpdatedAtTimestamps()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var userId = "user_42";
+        var principal = CreatePrincipal(userId);
+
+        await using var dbContext = CreateDbContext(dbName);
+        var createReq = new CreateGiftListRequest("Birthday Wishlist", "Some description");
+
+        _fakeTimeProvider.Advance(new(0, 0, 5));
+        var result = await UserListsEndpoints.CreateNewList(createReq, principal, dbContext, CancellationToken.None);
+        var creationDate = _fakeTimeProvider.GetUtcNow();
+
+        var createdResult = Assert.IsType<CreatedAtRoute<ListSummaryDto>>(result);
+        var listId = (Guid)createdResult.RouteValues["listId"]!;
+
+        var savedList = await dbContext.GiftLists.FindAsync(listId);
+        Assert.NotNull(savedList);
+        Assert.Equal(savedList.CreatedAt, creationDate);
+        Assert.Equal(savedList.UpdatedAt, creationDate);
+        Assert.Equal(savedList.CreatedAt, savedList.UpdatedAt);
+    }
+
+    [Fact]
+    public async Task EditList_ShouldUpdateUpdatedAt_WhilePreservingCreatedAt()
+    {
+        var dbName = Guid.NewGuid().ToString();
+        var userId = "user_42";
+        var principal = CreatePrincipal(userId);
+
+        await using var dbContext = CreateDbContext(dbName);
+
+        var giftList = GiftList.CreateNew("Initial Name", "Initial Desc", userId);
+        dbContext.GiftLists.Add(giftList);
+        // Should set CreatedAt and UpdatedAt on SaveChanges
+        await dbContext.SaveChangesAsync();
+
+        var creationDate = _fakeTimeProvider.GetUtcNow();
+
+        // Ensure we simulate a distinct initial timestamp
+        dbContext.Entry(giftList).State = EntityState.Unchanged;
+
+        _fakeTimeProvider.Advance(new(0, 0, 5)); // Advance time by 5 seconds
+        var updateReq = new UpdateGiftListRequest("Updated Name", "Updated Desc");
+        var result = await UserListsEndpoints.EditList(giftList.Id, updateReq, principal, dbContext, CancellationToken.None);
+
+        var updateDate = _fakeTimeProvider.GetUtcNow();
+
+        var okResult = Assert.IsType<IValueHttpResult<ListSummaryDto>>(result, exactMatch: false);
+        Assert.Equal("Updated Name", okResult.Value!.Name);
+
+        var savedList = await dbContext.GiftLists.FindAsync(giftList.Id);
+        Assert.NotNull(savedList);
+        Assert.Equal(creationDate, savedList.CreatedAt);
+        Assert.Equal(updateDate, savedList.UpdatedAt);
+        Assert.True(savedList.UpdatedAt > savedList.CreatedAt);
     }
 }

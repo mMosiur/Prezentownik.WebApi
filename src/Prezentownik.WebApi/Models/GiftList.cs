@@ -1,6 +1,6 @@
 namespace Prezentownik.WebApi.Models;
 
-public class GiftList
+public class GiftList : IHasAuditDateTimes
 {
     public Guid Id { get; init; }
 
@@ -11,9 +11,8 @@ public class GiftList
     public required string OwnerId { get; init; }
     public AppUser? Owner { get; init; }
 
-    public DateTimeOffset CreatedAt { get; protected set; }
-
-    public DateTimeOffset UpdatedAt { get; protected set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
 
     // Navigation property to contained gift items
     public ICollection<Item> Items { get; } = [];

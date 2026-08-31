@@ -21,7 +21,7 @@ public static class UserListsEndpoints
             .RequireAuthorization();
 
         group.MapGet("/", GetAllLists)
-            .Produces<List<ListSummaryDto>>(StatusCodes.Status200OK)
+            .Produces<List<ListSummaryDto>>()
             .WithDescription("Get all user's lists");
 
         group.MapPost("/", CreateNewList)
@@ -31,14 +31,14 @@ public static class UserListsEndpoints
 
         group.MapGet("/{listId:guid}", GetListDetails)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces<ListDetailsDto>(StatusCodes.Status200OK)
+            .Produces<ListDetailsDto>()
             .WithName(nameof(GetListDetails))
             .WithDescription("Edit page view");
 
         group.MapPut("/{listId:guid}", EditList)
             .Accepts<UpdateGiftListRequest>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces<ListSummaryDto>(StatusCodes.Status200OK)
+            .Produces<ListSummaryDto>()
             .WithDescription("Update list info");
 
         group.MapDelete("/{listId:guid}", DeleteList)
@@ -49,20 +49,20 @@ public static class UserListsEndpoints
         group.MapPost("/{listId:guid}/items", AddListItem)
             .Accepts<UpsertItemRequest>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces<ItemDto>(StatusCodes.Status200OK)
+            .Produces<ItemDto>()
             .WithDescription("Add a gift item");
 
         group.MapPut("/{listId:guid}/items/{itemId:guid}", EditListItem)
             .Accepts<UpsertItemRequest>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status404NotFound)
-            .Produces<ItemDto>(StatusCodes.Status200OK)
+            .Produces<ItemDto>()
             .WithDescription("Edit a gift item");
 
         group.MapPut("/{listId:guid}/items/reorder", ReorderListItems)
             .Accepts<ReorderItemsRequest>(MediaTypeNames.Application.Json)
             .Produces(StatusCodes.Status404NotFound)
             .Produces(StatusCodes.Status400BadRequest)
-            .Produces<ListDetailsDto>(StatusCodes.Status200OK)
+            .Produces<ListDetailsDto>()
             .WithDescription("Reorder list items");
 
         group.MapDelete("/{listId:guid}/items/{itemId:guid}", DeleteListItem)
@@ -84,6 +84,11 @@ public static class UserListsEndpoints
         if (includeClaims) query = query.Include(i => i.Claims);
         return await query.FirstOrDefaultAsync(i => i.Id == itemId && i.GiftList.OwnerId == userId, ct);
     }
+
+
+    #region Endpoint handlers
+
+    // ReSharper disable MemberCanBePrivate.Global Endpoint handlers should be internal to allow for easier testing
 
     internal static async Task<IResult> GetAllLists(
         ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
@@ -288,4 +293,8 @@ public static class UserListsEndpoints
 
         return Results.NoContent();
     }
+
+    // ReSharper restore MemberCanBePrivate.Global
+
+    #endregion
 }

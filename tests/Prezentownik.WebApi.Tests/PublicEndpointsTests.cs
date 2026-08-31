@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Time.Testing;
 using Prezentownik.WebApi.Data;
 using Prezentownik.WebApi.Models;
 using Prezentownik.WebApi.Modules.Commons.DTOs;
@@ -13,14 +14,15 @@ namespace Prezentownik.WebApi.Tests;
 
 public class PublicEndpointsTests
 {
-    private static AppDbContext CreateDbContext(string dbName)
+private readonly FakeTimeProvider _fakeTimeProvider = TestHelpers.CreateFakeTimeProvider();
+
+    private AppDbContext CreateDbContext(string dbName)
     {
         var options = new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(databaseName: dbName)
             .Options;
 
-        return new AppDbContext(options);
-        // TestContext.Current.CancellationToken
+        return new AppDbContext(options, _fakeTimeProvider);
     }
 
     private static ClaimsPrincipal CreatePrincipal(string? userId)
