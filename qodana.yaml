@@ -1,0 +1,36 @@
+#-------------------------------------------------------------------------------#
+#               Qodana analysis is configured by qodana.yaml file               #
+#             https://www.jetbrains.com/help/qodana/qodana-yaml.html            #
+#-------------------------------------------------------------------------------#
+
+#################################################################################
+#              WARNING: Do not store sensitive information in this file,        #
+#               as its contents will be included in the Qodana report.          #
+#################################################################################
+version: "1.0"
+
+# Qodana .NET linter
+linter: jetbrains/qodana-dotnet:2026.2
+
+# Target .NET solution
+dotnet:
+  solution: Prezentownik.WebApi.slnx
+  configuration: Debug
+
+#Specify inspection profile for code analysis
+profile:
+  name: qodana.recommended
+
+#Disable inspections
+exclude:
+  - name: All
+    paths:
+      - src/Prezentownik.WebApi/Migrations
+      - src/Prezentownik.WebApi/Resources/IdentityErrors.Designer.cs
+      - BenchmarkDotNet.Artifacts
+      - src/BenchmarkDotNet.Artifacts
+
+# Quality gate (fails CI if high/critical issues are introduced)
+failureConditions:
+  severityThresholds:
+    critical: 0
