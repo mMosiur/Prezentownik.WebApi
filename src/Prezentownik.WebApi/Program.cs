@@ -86,6 +86,13 @@ try
         otel.UseAzureMonitor();
     }
 
+    builder.Services.Configure<ForwardedHeadersOptions>(options =>
+    {
+        options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        options.KnownIPNetworks.Clear(); // Critical: Accept headers from non-localhost proxies
+        options.KnownProxies.Clear();
+    });
+
     otel.ConfigureResource(resource => resource.AddService(Diagnostics.ServiceName))
         .WithTracing(tracing => tracing
             .AddSource(Diagnostics.ServiceName)
@@ -152,11 +159,7 @@ try
     Log.Information("Configuring web host");
     var app = builder.Build();
 
-    app.UseForwardedHeaders(new()
-    {
-        ForwardedHeaders = ForwardedHeaders.XForwardedFor
-                         | ForwardedHeaders.XForwardedProto,
-    });
+    app.UseForwardedHeaders();
 
     app.MapOpenApi("/openapi/{documentName}.yaml")
         .CacheOutput(policyName: "OpenAPI");
