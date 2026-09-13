@@ -76,8 +76,7 @@ try
         });
     });
 
-    builder.Services.AddHealthChecks()
-        .AddCheck<DatabaseHealthCheck>("database");
+    builder.Services.AddHealthChecks();
 
     var otel = builder.Services.AddOpenTelemetry();
 
