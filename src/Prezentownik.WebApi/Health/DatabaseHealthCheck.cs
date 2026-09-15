@@ -4,9 +4,8 @@ using Prezentownik.WebApi.Data;
 
 namespace Prezentownik.WebApi.Health;
 
-public sealed class DatabaseHealthCheck(
-    IServiceScopeFactory scopeFactory,
-    ILogger<DatabaseHealthCheck> logger) : IHealthCheck
+public sealed class DatabaseHealthCheck(IServiceScopeFactory scopeFactory)
+    : IHealthCheck
 {
     private const string DatabaseUnreachable = "Database is unreachable";
     private const string DatabaseMigrationsPending = "Pending database migrations";
@@ -16,9 +15,11 @@ public sealed class DatabaseHealthCheck(
         HealthCheckContext context,
         CancellationToken cancellationToken = default)
     {
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseHealthCheck>>();
+
         try
         {
-            await using var scope = scopeFactory.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             var canConnect = await dbContext.Database.CanConnectAsync(cancellationToken);

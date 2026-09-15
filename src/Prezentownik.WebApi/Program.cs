@@ -14,6 +14,7 @@ using Prezentownik.WebApi.Modules.Public;
 using Prezentownik.WebApi.Modules.UserLists;
 using Prezentownik.WebApi.Health;
 using Prezentownik.WebApi;
+using Prezentownik.WebApi.HostedServices;
 using Prezentownik.WebApi.Services;
 using Serilog;
 using Serilog.Events;
@@ -76,11 +77,12 @@ try
         });
     });
 
-    builder.Services.AddHealthChecks();
+    builder.Services.AddApplicationHealthChecks();
 
     var otel = builder.Services.AddOpenTelemetry();
 
-    if (builder.Environment.IsProduction())
+    var applicationInsightsConnectionString = builder.Configuration.GetValue<string>("APPLICATIONINSIGHTS_CONNECTION_STRING");
+    if (!string.IsNullOrWhiteSpace(applicationInsightsConnectionString))
     {
         otel.UseAzureMonitor();
     }
@@ -98,13 +100,11 @@ try
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddEntityFrameworkCoreInstrumentation()
-            .AddNpgsql()
-            .AddOtlpExporter())
+            .AddNpgsql())
         .WithMetrics(metrics => metrics
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
-            .AddRuntimeInstrumentation()
-            .AddOtlpExporter());
+            .AddRuntimeInstrumentation());
 
     builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(
         connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
@@ -149,6 +149,8 @@ try
                 }));
     });
 
+    builder.Services.AddHostedService<DbStartupCheckHostedService>();
+
     builder
         .AddApplicationServices()
         .RegisterModule<AuthModule>()
@@ -160,10 +162,13 @@ try
 
     app.UseForwardedHeaders();
 
-    app.MapOpenApi("/openapi/{documentName}.yaml")
-        .CacheOutput(policyName: "OpenAPI");
+    if (app.Environment.IsDevelopment())
+    {
+        app.MapOpenApi("/openapi/{documentName}.yaml")
+            .CacheOutput(policyName: "OpenAPI");
+    }
 
-    app.MapHealthChecks("health");
+    app.MapApplicationHealthChecks("health");
 
     app.UseExceptionHandler();
 
@@ -183,6 +188,21 @@ try
     app.UseAuthorization();
 
     app.UseOutputCache();
+
+    // Simulate server latency only for local development
+    int simulateLatencyInMilliseconds = app.Configuration.GetValue("SimulateLatencyInMilliseconds", defaultValue: 0);
+    if (simulateLatencyInMilliseconds > 0)
+    {
+        app.Use(async (context, next) =>
+        {
+            if (context.Request.Path.Value?.Contains("health") is not true) // Skip health checks
+            {
+                // Adds an artificial delay
+                await Task.Delay(simulateLatencyInMilliseconds);
+            }
+            await next();
+        });
+    }
 
     app
         .MapModuleEndpoints<AuthModule>()

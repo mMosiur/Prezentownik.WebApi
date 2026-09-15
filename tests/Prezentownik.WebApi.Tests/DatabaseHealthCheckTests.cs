@@ -20,9 +20,8 @@ public class DatabaseHealthCheckTests
 
         var serviceProvider = services.BuildServiceProvider();
         var scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var logger = NullLogger<DatabaseHealthCheck>.Instance;
 
-        var healthCheck = new DatabaseHealthCheck(scopeFactory, logger);
+        var healthCheck = new DatabaseHealthCheck(scopeFactory);
 
         // Act
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
@@ -42,9 +41,8 @@ public class DatabaseHealthCheckTests
 
         var serviceProvider = services.BuildServiceProvider();
         var scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
-        var logger = NullLogger<DatabaseHealthCheck>.Instance;
 
-        var healthCheck = new DatabaseHealthCheck(scopeFactory, logger);
+        var healthCheck = new DatabaseHealthCheck(scopeFactory);
 
         // Act
         var result = await healthCheck.CheckHealthAsync(new HealthCheckContext());
