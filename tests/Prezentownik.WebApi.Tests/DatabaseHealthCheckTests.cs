@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Prezentownik.WebApi.Data;
 using Prezentownik.WebApi.Health;
@@ -17,6 +18,7 @@ public class DatabaseHealthCheckTests
         var services = new ServiceCollection();
         services.AddDbContext<AppDbContext>(options =>
             options.UseNpgsql("Host=127.0.0.1;Port=59999;Database=nonexistent;Username=fake;Password=fake;Timeout=1;Command Timeout=1"));
+        services.AddLogging(l => l.AddProvider(NullLoggerProvider.Instance));
 
         var serviceProvider = services.BuildServiceProvider();
         var scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
@@ -38,6 +40,7 @@ public class DatabaseHealthCheckTests
         var services = new ServiceCollection();
         services.AddDbContext<AppDbContext>(options =>
             options.UseInMemoryDatabase(Guid.NewGuid().ToString()));
+        services.AddLogging(l => l.AddProvider(NullLoggerProvider.Instance));
 
         var serviceProvider = services.BuildServiceProvider();
         var scopeFactory = serviceProvider.GetRequiredService<IServiceScopeFactory>();
