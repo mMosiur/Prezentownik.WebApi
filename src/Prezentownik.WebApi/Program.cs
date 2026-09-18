@@ -16,6 +16,7 @@ using Prezentownik.WebApi.Health;
 using Prezentownik.WebApi;
 using Prezentownik.WebApi.HostedServices;
 using Prezentownik.WebApi.Services;
+using Prezentownik.WebApi.Startup;
 using Serilog;
 using Serilog.Events;
 
@@ -32,17 +33,8 @@ try
 
     builder.Services.AddProblemDetails();
 
-    builder.Services.AddSerilog((services, lc) => lc
-        .ReadFrom.Configuration(builder.Configuration)
-        .ReadFrom.Services(services)
-        .Enrich.FromLogContext()
-        .WriteTo.OpenTelemetry(options =>
-        {
-            options.ResourceAttributes = new Dictionary<string, object>
-            {
-                ["service.name"] = Diagnostics.ServiceName
-            };
-        }));
+    builder.Logging.ClearProviders();
+    builder.Logging.Services.AddSerilog(builder.Environment);
 
     builder.Services.AddOutputCache(options =>
     {
@@ -106,9 +98,12 @@ try
             .AddHttpClientInstrumentation()
             .AddRuntimeInstrumentation());
 
-    builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(
-        connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
-        o => o.MapApplicationEnums(schema: "app")));
+    builder.Services.AddDbContext<AppDbContext>(options =>
+    {
+        options.UseNpgsql(
+            connectionString: builder.Configuration.GetConnectionString("DefaultConnection"),
+            o => o.MapApplicationEnums(schema: "app"));
+    });
 
     builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 

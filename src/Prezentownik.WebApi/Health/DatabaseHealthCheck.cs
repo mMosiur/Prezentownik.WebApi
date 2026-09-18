@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Prezentownik.WebApi.Data;
 
@@ -8,8 +7,7 @@ public sealed class DatabaseHealthCheck(IServiceScopeFactory scopeFactory)
     : IHealthCheck
 {
     private const string DatabaseUnreachable = "Database is unreachable";
-    private const string DatabaseMigrationsPending = "Pending database migrations";
-    private const string DatabaseUpToDate = "Database is up to date";
+    private const string DatabaseAvailable = "Database connection successful";
 
     public async Task<HealthCheckResult> CheckHealthAsync(
         HealthCheckContext context,
@@ -23,30 +21,12 @@ public sealed class DatabaseHealthCheck(IServiceScopeFactory scopeFactory)
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
             var canConnect = await dbContext.Database.CanConnectAsync(cancellationToken);
-            if (canConnect is false)
+            if (!canConnect)
             {
                 return HealthCheckResult.Unhealthy(DatabaseUnreachable);
             }
 
-            var pendingMigrations = (await dbContext.Database
-                .GetPendingMigrationsAsync(cancellationToken))
-                .ToList();
-
-            if (pendingMigrations.Count == 0)
-            {
-                return HealthCheckResult.Healthy(DatabaseUpToDate);
-            }
-
-            var pendingMigrationsText = string.Join(", ", pendingMigrations);
-            logger.LogWarning("Pending database migrations: {PendingMigrations}", pendingMigrationsText);
-
-            return HealthCheckResult.Degraded(
-                description: DatabaseMigrationsPending,
-                data: new Dictionary<string, object>
-                {
-                    ["PendingMigrations"] = pendingMigrations
-                });
-
+            return HealthCheckResult.Healthy(DatabaseAvailable);
         }
         catch (Exception ex)
         {

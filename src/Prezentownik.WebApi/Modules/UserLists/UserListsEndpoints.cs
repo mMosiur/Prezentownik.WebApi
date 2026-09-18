@@ -125,7 +125,10 @@ public static class UserListsEndpoints
 
         ListSummaryDto response = UserListsMapper.MapToListSummaryDto(giftList);
 
-        return Results.CreatedAtRoute(nameof(GetListDetails), new { listId = giftList.Id }, response);
+        return Results.CreatedAtRoute(
+            routeName: nameof(GetListDetails),
+            routeValues: new() { ["listId"] = giftList.Id },
+            value: response);
     }
 
     internal static async Task<IResult> GetListDetails(Guid listId,

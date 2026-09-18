@@ -32,7 +32,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options,
 
             giftList.HasKey(gl => gl.Id);
             giftList.Property(gl => gl.Id)
-                .HasValueGenerator<UuidV7ValueGenerator>();
+                .HasValueGeneratorFactory<UuidV7ValueGeneratorFactory>();
 
             giftList.Property(gl => gl.Name)
                 .HasMaxLength(128)
@@ -68,7 +68,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options,
 
             item.HasKey(i => i.Id);
             item.Property(i => i.Id)
-                .HasValueGenerator<UuidV7ValueGenerator>();
+                .HasValueGeneratorFactory<UuidV7ValueGeneratorFactory>();
 
             item.Property(i => i.Name)
                 .HasMaxLength(128)
@@ -99,7 +99,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options,
 
             claims.HasKey(c => c.Id);
             claims.Property(c => c.Id)
-                .HasValueGenerator<UuidV7ValueGenerator>();
+                .HasValueGeneratorFactory<UuidV7ValueGeneratorFactory>();
 
             claims.Property(c => c.QuantityClaimed)
                 .IsRequired();

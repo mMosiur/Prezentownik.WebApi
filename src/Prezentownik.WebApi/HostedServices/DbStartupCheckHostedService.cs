@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Prezentownik.WebApi.Data;
 
 namespace Prezentownik.WebApi.HostedServices;
@@ -19,17 +18,9 @@ internal sealed class DbStartupCheckHostedService(
         try
         {
             var canConnect = await dbContext.Database.CanConnectAsync(cancellationToken);
-            if (canConnect is false)
+            if (!canConnect)
             {
                 _logger.LogError("Database connection startup check failed");
-                return;
-            }
-
-            var pendingMigrations = (await dbContext.Database.GetPendingMigrationsAsync(cancellationToken)).ToList();
-            if (pendingMigrations.Count > 0)
-            {
-                var pendingMigrationsText = string.Join(", ", pendingMigrations);
-                _logger.LogWarning("Pending database migrations: {PendingMigrations}", pendingMigrationsText);
                 return;
             }
 

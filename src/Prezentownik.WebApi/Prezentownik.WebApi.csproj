@@ -4,6 +4,12 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <ImplicitUsings>enable</ImplicitUsings>
+
+        <EnableConfigurationBindingGenerator>true</EnableConfigurationBindingGenerator>
+        <EnableRequestDelegateGenerator>true</EnableRequestDelegateGenerator>
+
+        <EFOptimizeContext>true</EFOptimizeContext>
+
         <InterceptorsNamespaces>$(InterceptorsNamespaces);Microsoft.AspNetCore.Http.Validation.Generated</InterceptorsNamespaces>
     </PropertyGroup>
 
