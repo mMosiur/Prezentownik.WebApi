@@ -1,20 +1,26 @@
-using Prezentownik.WebApi.Modules.Auth.Email.Templates;
 using Prezentownik.WebApi.Services.Email;
-using Prezentownik.WebApi.Services.Html;
 
 namespace Prezentownik.WebApi.Modules.Auth.Email;
 
-public sealed class IdentityEmailTemplateService(IRazorHtmlRenderer renderer)
+public sealed class IdentityEmailTemplateService
     : IIdentityEmailTemplateService
 {
-    private readonly IRazorHtmlRenderer _renderer = renderer;
-
-    public async Task<EmailBody> RenderEmailConfirmationAsync(string confirmationLink)
+    public EmailBody RenderEmailConfirmation(string confirmationLink)
     {
-        var html = await _renderer.RenderAsync<EmailConfirmationTemplate>(new()
-        {
-            [nameof(EmailConfirmationTemplate.ConfirmationLink)] = confirmationLink
-        });
+        var html = EmailTemplate.RenderEmailHtml(
+            title: "Potwierdź swój adres e-mail",
+            heading: "Witaj w serwisie Prezentownik!",
+            buttonText: "Potwierdź adres e-mail",
+            buttonUrl: confirmationLink,
+            footerNote: "Jeśli to nie Ty zakładałeś konto w serwisie Prezentownik, możesz zignorować tę wiadomość.",
+            childContent:
+            //language=html
+            """
+            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #374151;">
+                Dziękujemy za rejestrację. Aby aktywować swoje konto i zacząć tworzyć listy prezentów, potwierdź swój adres e-mail.
+            </p>
+            """
+        );
 
         var plainText =
             $"""
@@ -29,12 +35,22 @@ public sealed class IdentityEmailTemplateService(IRazorHtmlRenderer renderer)
         return new(html, plainText);
     }
 
-    public async Task<EmailBody> RenderEmailPasswordResetLinkAsync(string resetLink)
+    public EmailBody RenderEmailPasswordResetLink(string resetLink)
     {
-        var html = await _renderer.RenderAsync<PasswordResetLinkTemplate>(new()
-        {
-            [nameof(PasswordResetLinkTemplate.ResetLink)] = resetLink
-        });
+        var html = EmailTemplate.RenderEmailHtml(
+            title: "Zresetuj swoje hasło",
+            heading: "Resetowanie hasła",
+            buttonText: "Zresetuj hasło",
+            buttonUrl: resetLink,
+            footerNote: "Link jest ważny przez ograniczony czas. Jeśli nie prosiłeś o reset hasła, Twoje konto jest bezpieczne – zignoruj tę wiadomość.",
+            childContent:
+            //language=html
+            """
+            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #374151;">
+                Otrzymaliśmy prośbę o zresetowanie hasła do Twojego konta w serwisie Prezentownik. Kliknij poniższy przycisk, aby ustawić nowe hasło.
+            </p>
+            """
+        );
 
         var plainText =
             $"""

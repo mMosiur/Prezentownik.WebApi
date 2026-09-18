@@ -4,6 +4,6 @@ namespace Prezentownik.WebApi.Modules.Auth.Email;
 
 public interface IIdentityEmailTemplateService
 {
-    Task<EmailBody> RenderEmailConfirmationAsync(string confirmationLink);
-    Task<EmailBody> RenderEmailPasswordResetLinkAsync(string resetLink);
+    EmailBody RenderEmailConfirmation(string confirmationLink);
+    EmailBody RenderEmailPasswordResetLink(string resetLink);
 }

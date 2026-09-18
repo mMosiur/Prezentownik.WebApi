@@ -23,7 +23,7 @@ public sealed class IdentityEmailSender : IEmailSender<AppUser>
     public async Task SendConfirmationLinkAsync(AppUser user, string email, string confirmationLink)
     {
         var link = ToFrontendLink("confirm-email", confirmationLink);
-        var emailBody = await _templateService.RenderEmailConfirmationAsync(link);
+        var emailBody = _templateService.RenderEmailConfirmation(link);
         await _emailService.SendAsync(
             recipient: email,
             subject: "Potwierdź swój adres e-mail",
@@ -35,7 +35,7 @@ public sealed class IdentityEmailSender : IEmailSender<AppUser>
     public async Task SendPasswordResetLinkAsync(AppUser user, string email, string resetLink)
     {
         var link = ToFrontendLink("reset-password", resetLink);
-        var emailBody = await _templateService.RenderEmailPasswordResetLinkAsync(link);
+        var emailBody = _templateService.RenderEmailPasswordResetLink(link);
         await _emailService.SendAsync(
             recipient: email,
             subject: "Zresetuj swoje hasło",
@@ -53,7 +53,7 @@ public sealed class IdentityEmailSender : IEmailSender<AppUser>
                 ["email"] = email,
                 ["code"] = resetCode
             });
-        var emailBody = await _templateService.RenderEmailPasswordResetLinkAsync(link);
+        var emailBody = _templateService.RenderEmailPasswordResetLink(link);
         await _emailService.SendAsync(
             recipient: email,
             subject: "Zresetuj swoje hasło",

@@ -30,16 +30,16 @@ public class IdentityEmailSenderTests
         public string? RenderedConfirmationLink { get; private set; }
         public string? RenderedPasswordResetLink { get; private set; }
 
-        public Task<EmailBody> RenderEmailConfirmationAsync(string confirmationLink)
+        public EmailBody RenderEmailConfirmation(string confirmationLink)
         {
             RenderedConfirmationLink = confirmationLink;
-            return Task.FromResult(new EmailBody($"<html>{confirmationLink}</html>", confirmationLink));
+            return new($"<html>{confirmationLink}</html>", confirmationLink);
         }
 
-        public Task<EmailBody> RenderEmailPasswordResetLinkAsync(string resetLink)
+        public EmailBody RenderEmailPasswordResetLink(string resetLink)
         {
             RenderedPasswordResetLink = resetLink;
-            return Task.FromResult(new EmailBody($"<html>{resetLink}</html>", resetLink));
+            return new($"<html>{resetLink}</html>", resetLink);
         }
     }
 
