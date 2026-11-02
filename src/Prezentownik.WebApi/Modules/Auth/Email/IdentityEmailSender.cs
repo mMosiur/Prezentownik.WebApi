@@ -34,7 +34,7 @@ public sealed class IdentityEmailSender : IEmailSender<AppUser>
 
     public async Task SendPasswordResetLinkAsync(AppUser user, string email, string resetLink)
     {
-        var link = ToFrontendLink("reset-password", resetLink);
+        var link = ToFrontendLink("reset-password", resetLink, email);
         var emailBody = _templateService.RenderEmailPasswordResetLink(link);
         await _emailService.SendAsync(
             recipient: email,
@@ -62,7 +62,7 @@ public sealed class IdentityEmailSender : IEmailSender<AppUser>
             CancellationToken.None);
     }
 
-    private string ToFrontendLink(string frontendPath, string apiLink)
+    private string ToFrontendLink(string frontendPath, string apiLink, string? email = null)
     {
         // MapIdentityApi builds confirmationLink/resetLink as an absolute, HTML-encoded URL pointing back
         // at this API (e.g. "{api}/auth/confirmEmail?userId=...&code=..."). We only care about the query
@@ -73,7 +73,17 @@ public sealed class IdentityEmailSender : IEmailSender<AppUser>
         var frontendUrl = $"{_frontendBaseUrl.TrimEnd('/')}/{frontendPath}";
         foreach (var (key, value) in query)
         {
+            if (email is not null && string.Equals(key, "email", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             frontendUrl = QueryHelpers.AddQueryString(frontendUrl, key, value.ToString());
+        }
+
+        if (email is not null)
+        {
+            frontendUrl = QueryHelpers.AddQueryString(frontendUrl, "email", email);
         }
 
         return frontendUrl;

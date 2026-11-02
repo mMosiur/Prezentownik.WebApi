@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Configuration;
 using Prezentownik.WebApi.Models;
 using Prezentownik.WebApi.Modules.Auth.Email;
@@ -84,17 +85,20 @@ public class IdentityEmailSenderTests
         var fakeEmailService = new FakeEmailService();
         var sender = new IdentityEmailSender(config, fakeTemplateService, fakeEmailService);
 
-        var user = new AppUser { Email = "user@example.com" };
-        var resetCode = "encodedResetCode123";
+        var email = "user+tag@example.com";
+        var resetCode = "encoded+&Reset=Code";
 
-        await sender.SendPasswordResetCodeAsync(user, "user@example.com", resetCode);
+        var user = new AppUser { Email = email };
+        await sender.SendPasswordResetCodeAsync(user, email, resetCode);
 
-        Assert.Equal("user@example.com", fakeEmailService.LastRecipient);
+        Assert.Equal(email, fakeEmailService.LastRecipient);
         Assert.Equal("Zresetuj swoje hasło", fakeEmailService.LastSubject);
         Assert.NotNull(fakeEmailService.LastHtmlBody);
         Assert.NotNull(fakeEmailService.LastPlainTextBody);
         Assert.NotNull(fakeTemplateService.RenderedPasswordResetLink);
-        Assert.Equal("https://prezentownik.info.pl/reset-password?email=user@example.com&code=encodedResetCode123", fakeTemplateService.RenderedPasswordResetLink);
+        var query = QueryHelpers.ParseQuery(new Uri(fakeTemplateService.RenderedPasswordResetLink!).Query);
+        Assert.Equal(email, query["email"].ToString());
+        Assert.Equal(resetCode, query["code"].ToString());
     }
 
     [Fact]
@@ -105,18 +109,21 @@ public class IdentityEmailSenderTests
         var fakeEmailService = new FakeEmailService();
         var sender = new IdentityEmailSender(config, fakeTemplateService, fakeEmailService);
 
-        var user = new AppUser { Email = "user@example.com" };
-        var apiResetLink = "http://api.local/auth/resetPassword?email=user@example.com&code=abc123Code";
+        var email = "user+tag@example.com";
+        var user = new AppUser { Email = email };
+        var apiResetLink = "http://api.local/auth/resetPassword?userId=user123&email=old%40example.com&code=abc%2B123%3D%26";
 
-        await sender.SendPasswordResetLinkAsync(user, "user@example.com", apiResetLink);
+        await sender.SendPasswordResetLinkAsync(user, email, apiResetLink);
 
-        Assert.Equal("user@example.com", fakeEmailService.LastRecipient);
+        Assert.Equal(email, fakeEmailService.LastRecipient);
         Assert.Equal("Zresetuj swoje hasło", fakeEmailService.LastSubject);
         Assert.NotNull(fakeEmailService.LastHtmlBody);
         Assert.NotNull(fakeEmailService.LastPlainTextBody);
         Assert.NotNull(fakeTemplateService.RenderedPasswordResetLink);
         Assert.StartsWith("https://prezentownik.info.pl/reset-password", fakeTemplateService.RenderedPasswordResetLink);
-        Assert.Contains("email=user@example.com", fakeTemplateService.RenderedPasswordResetLink);
-        Assert.Contains("code=abc123Code", fakeTemplateService.RenderedPasswordResetLink);
+        var query = QueryHelpers.ParseQuery(new Uri(fakeTemplateService.RenderedPasswordResetLink!).Query);
+        Assert.Equal("user123", query["userId"].ToString());
+        Assert.Equal(email, query["email"].ToString());
+        Assert.Equal("abc+123=&", query["code"].ToString());
     }
 }
