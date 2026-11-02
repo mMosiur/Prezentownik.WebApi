@@ -598,6 +598,17 @@ paths:
       responses:
         '400':
           description: Bad Request
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                required:
+                  - message
+                type: object
+                properties:
+                  message:
+                    type: string
         '200':
           description: OK
           content:
@@ -635,6 +646,39 @@ paths:
           description: No Content
         '403':
           description: Forbidden
+  '/lists/{listId}/items/{itemId}/claims/{claimId}':
+    delete:
+      tags:
+        - Public
+      description: Unclaim a specific gift claim owned by the current user
+      parameters:
+        - name: listId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: claimId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
   /lists/claims/adopt:
     post:
       tags:
@@ -726,9 +770,13 @@ components:
             - string
     CreateClaimResponse:
       required:
+        - claimId
         - revocationToken
       type: object
       properties:
+        claimId:
+          type: string
+          format: uuid
         revocationToken:
           type:
             - 'null'

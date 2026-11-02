@@ -1,9 +1,12 @@
+using System.Data;
 using System.Net.Mime;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 using Prezentownik.WebApi.Data;
 using Prezentownik.WebApi.Extensions;
+using Prezentownik.WebApi.Models;
 using Prezentownik.WebApi.Modules.Commons.DTOs;
 using Prezentownik.WebApi.Modules.Public.DTOs;
 using Serilog;
@@ -26,6 +29,7 @@ public static class PublicEndpoints
             .Accepts<CreateClaimRequest>(MediaTypeNames.Application.Json)
             .Produces<CreateClaimResponse>()
             .Produces(StatusCodes.Status400BadRequest)
+            .Produces<ErrorMessage>(StatusCodes.Status409Conflict)
             .Produces(StatusCodes.Status403Forbidden)
             .RequireRateLimiting("public-claims")
             .WithDescription("Claim a gift");
@@ -36,6 +40,15 @@ public static class PublicEndpoints
             .Produces(StatusCodes.Status403Forbidden)
             .RequireRateLimiting("public-claims")
             .WithDescription("Unclaim a gift");
+
+        group.MapDelete("/{listId:guid}/items/{itemId:guid}/claims/{claimId:guid}", UnclaimGiftById)
+            .Produces(StatusCodes.Status204NoContent)
+            .Produces(StatusCodes.Status401Unauthorized)
+            .Produces(StatusCodes.Status403Forbidden)
+            .Produces(StatusCodes.Status404NotFound)
+            .RequireAuthorization()
+            .RequireRateLimiting("public-claims")
+            .WithDescription("Unclaim a specific gift claim owned by the current user");
 
         group.MapPost("/claims/adopt", AdoptClaims)
             .RequireAuthorization() // Adopting claims requires authentication
@@ -80,6 +93,12 @@ public static class PublicEndpoints
         Log.Information("Claiming gift {ItemId} from public list {ListId} (UserId: {UserId}, Claimant name: {ClaimantName}, quantity: {ClaimQuantity})",
             itemId, listId, userId, request.ClaimantName, request.QuantityClaimed);
 
+        await using var transaction = await BeginItemWriteTransactionAsync(dbContext, cancellationToken);
+        if (transaction is not null && !await LockItemAsync(dbContext, itemId, cancellationToken))
+        {
+            return Results.NotFound();
+        }
+
         var giftList = await dbContext.GiftLists
             .Include(l => l.Owner)
             .Include(l => l.Items)
@@ -96,10 +115,16 @@ public static class PublicEndpoints
         var item = giftList.Items.FirstOrDefault(i => i.Id == itemId);
         if (item is null) return Results.NotFound();
 
+        if (userId is not null && item.HasClaimFromUser(userId))
+        {
+            return Results.Conflict(new ErrorMessage("You already have a reservation for this gift."));
+        }
+
+        GiftClaim newClaim;
         try
         {
             var claimantName = string.IsNullOrWhiteSpace(request.ClaimantName) ? null : request.ClaimantName.Trim();
-            item.AddClaim(request.QuantityClaimed, claimantName, userId);
+            newClaim = item.AddClaim(request.QuantityClaimed, claimantName, userId);
         }
         catch (InvalidOperationException ex)
         {
@@ -107,11 +132,34 @@ public static class PublicEndpoints
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
 
-        var newClaim = item.Claims.Last();
-        CreateClaimResponse response = new(newClaim.RevocationToken);
-
+        CreateClaimResponse response = new(newClaim.Id, newClaim.RevocationToken);
         return Results.Ok(response);
+    }
+
+    internal static async Task<IResult> UnclaimGiftById(Guid listId, Guid itemId, Guid claimId,
+        ClaimsPrincipal principal, AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        var userId = principal.GetUserId();
+        if (userId is null) return Results.Unauthorized();
+
+        var giftList = await dbContext.GiftLists
+            .Include(l => l.Items)
+            .ThenInclude(l => l.Claims)
+            .FirstOrDefaultAsync(l => l.Id == listId, cancellationToken);
+
+        if (giftList is null) return Results.NotFound();
+        if (userId == giftList.OwnerId) return Results.Forbid();
+
+        var item = giftList.Items.FirstOrDefault(i => i.Id == itemId);
+        if (item is null || !item.RemoveClaimById(claimId, userId)) return Results.NotFound();
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+        return Results.NoContent();
     }
 
     internal static async Task<IResult> UnclaimGift(Guid listId, Guid itemId, [FromQuery] Guid? revocationToken,
@@ -180,20 +228,42 @@ public static class PublicEndpoints
 
         Log.Information("Adopting {Count} unauthenticated claims for user {UserId}", distinctTokens.Count, userId);
 
+        await using var transaction = await BeginItemWriteTransactionAsync(dbContext, cancellationToken);
+        if (transaction is not null)
+        {
+            var itemIds = await dbContext.GiftClaims
+                .AsNoTracking()
+                .Where(c => c.RevocationToken != null && distinctTokens.Contains(c.RevocationToken.Value))
+                .Select(c => c.ItemId)
+                .Distinct()
+                .OrderBy(id => id)
+                .ToListAsync(cancellationToken);
+
+            foreach (var itemId in itemIds)
+            {
+                await LockItemAsync(dbContext, itemId, cancellationToken);
+            }
+        }
+
         var claims = await dbContext.GiftClaims
             .Include(c => c.Item)
             .ThenInclude(i => i.GiftList)
             .Where(c => c.RevocationToken != null && distinctTokens.Contains(c.RevocationToken.Value))
             .ToListAsync(cancellationToken);
 
-        var filteredClaims = claims
-            .Where(c => c.Item.GiftList.OwnerId != userId)
-            .Where(c => c.ClaimantId is null || c.ClaimantId == userId)
-            .ToList();
-
         var adoptedClaims = new List<Guid>();
-        foreach (var claim in filteredClaims)
+        var itemIdsClaimedByUser = await dbContext.GiftClaims
+            .Where(c => c.ClaimantId == userId)
+            .Select(c => c.ItemId)
+            .ToHashSetAsync(cancellationToken);
+
+        foreach (var claim in claims.OrderBy(c => c.ItemId).ThenBy(c => c.Id))
         {
+            if (claim.Item.GiftList.OwnerId == userId || claim.ClaimantId is not null || !itemIdsClaimedByUser.Add(claim.ItemId))
+            {
+                continue;
+            }
+
             var revocationToken = claim.RevocationToken!.Value;
             claim.AssignToUser(userId);
             adoptedClaims.Add(revocationToken);
@@ -204,8 +274,39 @@ public static class PublicEndpoints
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 
+        if (transaction is not null)
+        {
+            await transaction.CommitAsync(cancellationToken);
+        }
+
         Log.Information("Successfully adopted {AdoptedCount} claims for user {UserId}", adoptedClaims.Count, userId);
 
         return Results.Ok(new AdoptClaimsResponse(adoptedClaims));
+    }
+
+    private static async Task<IDbContextTransaction?> BeginItemWriteTransactionAsync(
+        AppDbContext dbContext, CancellationToken cancellationToken)
+    {
+        return dbContext.Database.ProviderName == "Npgsql.EntityFrameworkCore.PostgreSQL"
+            ? await dbContext.Database.BeginTransactionAsync(cancellationToken)
+            : null;
+    }
+
+    private static async Task<bool> LockItemAsync(
+        AppDbContext dbContext, Guid itemId, CancellationToken cancellationToken)
+    {
+        var connection = dbContext.Database.GetDbConnection();
+        await using var command = connection.CreateCommand();
+        command.Transaction = dbContext.Database.CurrentTransaction?.GetDbTransaction();
+        command.CommandText = "SELECT \"Id\" FROM app.\"Items\" WHERE \"Id\" = @itemId FOR UPDATE";
+
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "itemId";
+        parameter.DbType = DbType.Guid;
+        parameter.Value = itemId;
+        command.Parameters.Add(parameter);
+
+        var result = await command.ExecuteScalarAsync(cancellationToken);
+        return result is not null and not DBNull;
     }
 }

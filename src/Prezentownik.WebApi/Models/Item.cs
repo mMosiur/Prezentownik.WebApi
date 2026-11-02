@@ -19,6 +19,9 @@ public class Item
 
     public int TotalClaimsQuantity => Claims.Sum(c => c.QuantityClaimed);
 
+    public bool HasClaimFromUser(string claimantId)
+        => Claims.Any(c => c.ClaimantId == claimantId);
+
     public int OrderNumber { get; set; }
 
     public Guid GiftListId { get; init; }
@@ -95,6 +98,12 @@ public class Item
         }
 
         Claims.Remove(claim);
+    }
+
+    public bool RemoveClaimById(Guid claimId, string claimantId)
+    {
+        var claim = Claims.FirstOrDefault(c => c.Id == claimId && c.ClaimantId == claimantId);
+        return claim is not null && Claims.Remove(claim);
     }
 
     public static Item CreateFromRequest(string name, string? description, int orderNumber, ItemType type, int? targetQuantity)
