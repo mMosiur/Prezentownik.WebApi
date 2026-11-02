@@ -167,8 +167,7 @@ public static class PublicEndpoints
     {
         var userId = principal.GetUserId();
 
-        Log.Information("Unclaiming gift {ItemId} from public list {ListId} (UserId: {UserId}, Revocation token: {RevocationToken})",
-            itemId, listId, userId, revocationToken);
+        Log.Information("Unclaiming gift {ItemId} from public list {ListId} (UserId: {UserId})", itemId, listId, userId);
 
         var giftList = await dbContext.GiftLists
             .Include(l => l.Owner)

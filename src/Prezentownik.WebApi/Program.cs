@@ -74,10 +74,6 @@ try
     var otel = builder.Services.AddOpenTelemetry();
 
     var applicationInsightsConnectionString = builder.Configuration.GetValue<string>("APPLICATIONINSIGHTS_CONNECTION_STRING");
-    if (!string.IsNullOrWhiteSpace(applicationInsightsConnectionString))
-    {
-        otel.UseAzureMonitor();
-    }
 
     builder.Services.Configure<ForwardedHeadersOptions>(options =>
     {
@@ -90,6 +86,7 @@ try
         .WithTracing(tracing => tracing
             .AddSource(Diagnostics.ServiceName)
             .AddAspNetCoreInstrumentation()
+            .AddProcessor<HttpRequestQueryRedactionProcessor>()
             .AddHttpClientInstrumentation()
             .AddEntityFrameworkCoreInstrumentation()
             .AddNpgsql())
@@ -97,6 +94,11 @@ try
             .AddAspNetCoreInstrumentation()
             .AddHttpClientInstrumentation()
             .AddRuntimeInstrumentation());
+
+    if (!string.IsNullOrWhiteSpace(applicationInsightsConnectionString))
+    {
+        otel.UseAzureMonitor();
+    }
 
     builder.Services.AddDbContext<AppDbContext>(options =>
     {
